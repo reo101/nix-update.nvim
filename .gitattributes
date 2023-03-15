@@ -1,0 +1,3 @@
+*.fnl linguist-language=Fennel
+lua/** linguist-generated
+doc/* linguist-documentation
