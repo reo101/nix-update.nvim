@@ -2,7 +2,8 @@
         : get-prefetcher-extractor}
        (require :nix-update.prefetchers))
 
-(local {: call-command}
+(local {: find-child
+        : call-command}
        (require :nix-update.util))
 
 ;;; Define TS query for getting the fetches
@@ -57,7 +58,7 @@
     (tree:root)))
 
 ;;; Try finding bounded value
-(fn try-get-value [bufnr attrset name]
+(fn try-get-value [bufnr bounder name]
   ;;; Get current buffer
   (local bufnr (or bufnr
                    (vim.api.nvim_get_current_buf)))
@@ -70,28 +71,31 @@
 
   (local
     bindings
-    (collect [binding _ (attrset:iter_children)]
-     (match (icollect [binding-elem _ (binding:iter_children)]
-              (match (binding-elem:type)
-                ;;; lhs
-                "attrpath"
-                (vim.treesitter.get_node_text
-                  binding-elem
-                  bufnr)
-                ;;; rhs - string (BOTTOM)
-                "string_expression"
-                (icollect [binding-part _ (binding-elem:iter_children)]
-                  (when (binding-part:named)
-                    {:node  binding-part
-                     :value (vim.treesitter.get_node_text
-                              binding-part
-                              bufnr)}))
-                ;;; rhs - variable (RECURSION)
-                "variable_expression"
-                [(vim.treesitter.get_node_text
-                                 binding-elem
-                                 bufnr)]))
-       [attr [val]] (values attr val))))
+    (collect [binding _ (bounder:iter_children)]
+      (match (icollect [binding-elem _ (binding:iter_children)]
+               (match (binding-elem:type)
+                 ;;; lhs
+                 "attrpath"
+                 (vim.treesitter.get_node_text
+                   binding-elem
+                   bufnr)
+                 ;;; rhs - string (BOTTOM)
+                 "string_expression"
+                 (icollect [binding-part _ (binding-elem:iter_children)]
+                   (when (binding-part:named)
+                     {:node  binding-part
+                      ;;; TODO: iterate through children:
+                      ;;;       - string_fragment -> direct
+                      ;;;       - interpolation -> indirecly
+                      :value (vim.treesitter.get_node_text
+                               binding-part
+                               bufnr)}))
+                 ;;; rhs - variable (RECURSION)
+                 "variable_expression"
+                 [(vim.treesitter.get_node_text
+                                  binding-elem
+                                  bufnr)]))
+        [attr [val]] (values attr val))))
 
   (let [binding (. bindings name)]
     (match (type binding)
@@ -101,16 +105,24 @@
       ;;; Missing/variable reference
       other
       (do
-        ;;; Find closest parent binding_set
-        (var target (attrset:parent))
+        ;;; Find closest parent with a binding_set
+        ;;; (immediate parent would short-circuit the loop)
+        (var target (: (: bounder :parent) :parent))
         (while (and (not= target nil)
-                    (not= (target:type) "binding_set"))
+                    (not= (target:type) "rec_attrset_expression")
+                    (not= (target:type) "let_expression"))
           (set target (target:parent)))
 
-        ;;; If we find such an attrset
+        ;;; If we find such a parent
         (when (not= target nil)
+          ;;; Step down into its binding_set
+          (set target
+               (find-child
+                 #(= ($:type) "binding_set")
+                 (target:iter_children)))
+          ;;; Check out what we are looking for
           (match other
-            ;;; Recurse for referenced variable
+            ;;; Recurse for directly referenced variable
             "string"
             (try-get-value bufnr target binding)
             ;;; Recurse for original variable
@@ -146,13 +158,6 @@
                  ;;; ... the fetch name ...
                  "_fname"
                  (vim.treesitter.get_node_text node bufnr)
-                 ; {:name  (vim.treesitter.get_node_text node bufnr)
-                 ;  :range (let [(start-row start-col end-row end-col)
-                 ;               (vim.treesitter.get_node_range node bufnr)]
-                 ;           {: start-row
-                 ;            : start-col
-                 ;            : end-row
-                 ;            : end-col})}
                  ;;; ... its arguments ...
                  "_fargs"
                  (collect [binding _ (node:iter_children)]
@@ -261,10 +266,17 @@
             [(string.format
                "sha256 = \"%s\";"
                value)])
+          ;;; TODO:
+          ;;; nvim_buf_set_mark
+          ;;; nvim_win_set_cursor
+          ;;; ==
+          ;;; nvim_buf_get_mark
+          ;;; nvim_win_set_cursor
           (vim.cmd
             (string.format
               "normal ma%sggj==`a"
-              end-row))))))
+              end-row)))))
+    (vim.notify "Prefetch complete!"))
 
   ;;; Call the command (will see results through `sed`)
   (call-command prefetcher-cmd sed)
@@ -280,5 +292,5 @@
  : get-root
  : try-get-value
  : find-used-fetches
- : get-fetch-at-cursor 
+ : get-fetch-at-cursor
  : prefetch-fetch-at-cursor}

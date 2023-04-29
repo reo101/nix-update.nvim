@@ -2,7 +2,8 @@
  local get_prefetcher_extractor = _local_1_["get-prefetcher-extractor"]
 
 
- local _local_2_ = require("nix-update.util") local call_command = _local_2_["call-command"] local fetches_query_string = "\n(\n  (apply_expression\n    function:\n      [(variable_expression\n         name: (identifier) @_fname)\n       (select_expression\n         attrpath:\n           (attrpath\n             attr: (identifier) @_fname\n             .))]\n    argument:\n      (attrset_expression\n        (binding_set) @_fargs)\n  ) @_fwhole\n  (#any-of? @_fname %s)\n)\n       "
+ local _local_2_ = require("nix-update.util") local find_child = _local_2_["find-child"]
+ local call_command = _local_2_["call-command"] local fetches_query_string = "\n(\n  (apply_expression\n    function:\n      [(variable_expression\n         name: (identifier) @_fname)\n       (select_expression\n         attrpath:\n           (attrpath\n             attr: (identifier) @_fname\n             .))]\n    argument:\n      (attrset_expression\n        (binding_set) @_fargs)\n  ) @_fwhole\n  (#any-of? @_fname %s)\n)\n       "
 
 
 
@@ -57,7 +58,7 @@
 
 
 
- local function try_get_value(bufnr, attrset, name)
+ local function try_get_value(bufnr, bounder, name)
 
  local bufnr0 = (bufnr or vim.api.nvim_get_current_buf())
 
@@ -70,7 +71,7 @@
 
  local bindings
 
- do local tbl_14_auto = {} for binding, _ in attrset:iter_children() do local k_15_auto, v_16_auto = nil, nil
+ do local tbl_14_auto = {} for binding, _ in bounder:iter_children() do local k_15_auto, v_16_auto = nil, nil
  do local _8_ do local tbl_17_auto = {} local i_18_auto = #tbl_17_auto for binding_elem, _0 in binding:iter_children() do local val_19_auto
  do local _9_ = binding_elem:type() if (_9_ == "attrpath") then
 
@@ -88,6 +89,9 @@
 
 
 
+
+
+
  val_19_auto = {vim.treesitter.get_node_text(binding_elem, bufnr0)} else val_19_auto = nil end end if (nil ~= val_19_auto) then i_18_auto = (i_18_auto + 1) do end (tbl_17_auto)[i_18_auto] = val_19_auto else end end _8_ = tbl_17_auto end if ((_G.type(_8_) == "table") and (nil ~= (_8_)[1]) and ((_G.type((_8_)[2]) == "table") and (nil ~= ((_8_)[2])[1]))) then local attr = (_8_)[1] local val = ((_8_)[2])[1]
 
 
@@ -97,22 +101,32 @@
  local _16_ = type(binding) if (_16_ == "table") then
 
 
- return binding elseif (nil ~= _16_) then local other = _16_ local target = attrset:parent()
+ return binding elseif (nil ~= _16_) then local other = _16_
 
 
 
 
 
- while ((target ~= nil) and (target:type() ~= "binding_set")) do target = target:parent() end
+ local target = bounder:parent():parent()
+ while ((target ~= nil) and (target:type() ~= "rec_attrset_expression") and (target:type() ~= "let_expression")) do target = target:parent() end
+
+
+
 
 
 
 
  if (target ~= nil) then
- local _17_ = other if (_17_ == "string") then
 
 
- return try_get_value(bufnr0, target, binding) elseif (_17_ == "nil") then
+
+ local function _17_(_241) return (_241:type() == "binding_set") end target = find_child(_17_, target:iter_children())
+
+
+ local _18_ = other if (_18_ == "string") then
+
+
+ return try_get_value(bufnr0, target, binding) elseif (_18_ == "nil") then
 
 
  return try_get_value(bufnr0, target, name) else return nil end else return nil end else return nil end end
@@ -142,10 +156,10 @@
 
 
 
- local function _23_() local _22_ = fetches_query.captures[id] if (_22_ == "_fname") then
+ local function _24_() local _23_ = fetches_query.captures[id] if (_23_ == "_fname") then
 
 
- return vim.treesitter.get_node_text(node, bufnr0) elseif (_22_ == "_fargs") then local tbl_14_auto0 = {}
+ return vim.treesitter.get_node_text(node, bufnr0) elseif (_23_ == "_fargs") then local tbl_14_auto0 = {}
 
 
 
@@ -156,16 +170,16 @@
 
 
  for binding, _ in node:iter_children() do local k_15_auto0, v_16_auto0 = nil, nil
- do local _24_ do local tbl_17_auto0 = {} local i_18_auto0 = #tbl_17_auto0 for binding_elem, _0 in binding:iter_children() do local val_19_auto0
- do local _25_ = binding_elem:type() if (_25_ == "attrpath") then
+ do local _25_ do local tbl_17_auto0 = {} local i_18_auto0 = #tbl_17_auto0 for binding_elem, _0 in binding:iter_children() do local val_19_auto0
+ do local _26_ = binding_elem:type() if (_26_ == "attrpath") then
 
 
- val_19_auto0 = vim.treesitter.get_node_text(binding_elem, bufnr0) else val_19_auto0 = nil end end if (nil ~= val_19_auto0) then i_18_auto0 = (i_18_auto0 + 1) do end (tbl_17_auto0)[i_18_auto0] = val_19_auto0 else end end _24_ = tbl_17_auto0 end if ((_G.type(_24_) == "table") and (nil ~= (_24_)[1])) then local attr = (_24_)[1]
- k_15_auto0, v_16_auto0 = attr, try_get_value(bufnr0, node, attr) else k_15_auto0, v_16_auto0 = nil end end if ((k_15_auto0 ~= nil) and (v_16_auto0 ~= nil)) then tbl_14_auto0[k_15_auto0] = v_16_auto0 else end end return tbl_14_auto0 elseif (_22_ == "_fwhole") then
+ val_19_auto0 = vim.treesitter.get_node_text(binding_elem, bufnr0) else val_19_auto0 = nil end end if (nil ~= val_19_auto0) then i_18_auto0 = (i_18_auto0 + 1) do end (tbl_17_auto0)[i_18_auto0] = val_19_auto0 else end end _25_ = tbl_17_auto0 end if ((_G.type(_25_) == "table") and (nil ~= (_25_)[1])) then local attr = (_25_)[1]
+ k_15_auto0, v_16_auto0 = attr, try_get_value(bufnr0, node, attr) else k_15_auto0, v_16_auto0 = nil end end if ((k_15_auto0 ~= nil) and (v_16_auto0 ~= nil)) then tbl_14_auto0[k_15_auto0] = v_16_auto0 else end end return tbl_14_auto0 elseif (_23_ == "_fwhole") then
 
 
 
- return node else return nil end end k_15_auto, v_16_auto = fetches_query.captures[id], _23_() if ((k_15_auto ~= nil) and (v_16_auto ~= nil)) then tbl_14_auto[k_15_auto] = v_16_auto else end end val_19_auto = tbl_14_auto end if (nil ~= val_19_auto) then i_18_auto = (i_18_auto + 1) do end (tbl_17_auto)[i_18_auto] = val_19_auto else end end found_fetches = tbl_17_auto end
+ return node else return nil end end k_15_auto, v_16_auto = fetches_query.captures[id], _24_() if ((k_15_auto ~= nil) and (v_16_auto ~= nil)) then tbl_14_auto[k_15_auto] = v_16_auto else end end val_19_auto = tbl_14_auto end if (nil ~= val_19_auto) then i_18_auto = (i_18_auto + 1) do end (tbl_17_auto)[i_18_auto] = val_19_auto else end end found_fetches = tbl_17_auto end
 
  return found_fetches end
 
@@ -178,7 +192,7 @@
  local found_fetches = find_used_fetches(bufnr0)
 
 
- local _local_33_ = vim.fn.getcursorcharpos() local _ = _local_33_[1] local cursor_row = _local_33_[2] local cursor_col = _local_33_[3] local _0 = _local_33_[4] local _1 = _local_33_[5]
+ local _local_34_ = vim.fn.getcursorcharpos() local _ = _local_34_[1] local cursor_row = _local_34_[2] local cursor_col = _local_34_[3] local _0 = _local_34_[4] local _1 = _local_34_[5]
 
 
  for _2, fetch in ipairs(found_fetches) do
@@ -203,7 +217,7 @@
 
 
  local prefetcher
- do local t_36_ = gen_prefetcher_cmd if (nil ~= t_36_) then t_36_ = (t_36_)[fetch_at_cursor._fname] else end prefetcher = t_36_ end
+ do local t_37_ = gen_prefetcher_cmd if (nil ~= t_37_) then t_37_ = (t_37_)[fetch_at_cursor._fname] else end prefetcher = t_37_ end
 
 
  if (prefetcher == nil) then
@@ -227,7 +241,7 @@
 
 
  local prefetcher_extractor
- do local t_40_ = get_prefetcher_extractor if (nil ~= t_40_) then t_40_ = (t_40_)[fetch_at_cursor._fname] else end prefetcher_extractor = t_40_ end
+ do local t_41_ = get_prefetcher_extractor if (nil ~= t_41_) then t_41_ = (t_41_)[fetch_at_cursor._fname] else end prefetcher_extractor = t_41_ end
 
 
  if (prefetcher_extractor == nil) then
@@ -240,7 +254,7 @@
 
  local function sed(res)
  for key, value in pairs(prefetcher_extractor(res)) do
- local node do local t_43_ = fetch_at_cursor if (nil ~= t_43_) then t_43_ = (t_43_)._fargs else end if (nil ~= t_43_) then t_43_ = (t_43_)[key] else end if (nil ~= t_43_) then t_43_ = (t_43_).node else end node = t_43_ end
+ local node do local t_44_ = fetch_at_cursor if (nil ~= t_44_) then t_44_ = (t_44_)._fargs else end if (nil ~= t_44_) then t_44_ = (t_44_)[key] else end if (nil ~= t_44_) then t_44_ = (t_44_).node else end node = t_44_ end
  if node then
 
  local start_row, start_col, end_row, end_col = vim.treesitter.get_node_range(node, bufnr0)
@@ -261,11 +275,11 @@
 
 
 
- vim.cmd(string.format("normal ma%sggj==`a", end_row)) end end return nil end
+ vim.cmd(string.format("normal ma%sggj==`a", end_row)) end end
 
 
 
-
+ return vim.notify("Prefetch complete!") end
 
 
  call_command(prefetcher_cmd, sed)

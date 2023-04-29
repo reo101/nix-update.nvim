@@ -12,6 +12,20 @@
       (lua "return false")))
   true)
 
+(fn map [f tbl]
+  (collect [k v (pairs tbl)]
+    (values k (f v))))
+
+(fn filter [p? tbl]
+  (collect [k v (pairs tbl)]
+    (when (p? k v)
+      (values k v))))
+
+(fn find-child [p? it]
+  (each [v _ it]
+    (when (p? v)
+      (lua "return v"))))
+
 (fn has-keys [tbl keys]
   (all (fn [_ key]
          (any (fn [k _]
@@ -64,6 +78,9 @@
 
 {: any
  : all
+ : map
+ : filter
+ : find-child
  : has-keys
  : concat-two
  : call-command}

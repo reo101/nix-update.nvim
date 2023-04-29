@@ -1,4 +1,6 @@
-(local {: has-keys
+(local {: map
+        : filter
+        : has-keys
         : concat-two}
        (require :nix-update.util))
 
@@ -34,14 +36,17 @@
   {;; Github
    :fetchFromGitHub
    (fn [args]
-     (when (not (has-keys args
-                         [:owner
-                          :repo
-                          :rev]))
+     (local required-keys
+            [:owner
+             :repo
+             :rev])
+     (when (not (has-keys args required-keys))
        (vim.notify
          (string.format
            "Missing keys: %s"
-           (vim.inspect args)))
+           (vim.inspect
+             (filter #(not (vim.list_contains (map #$1 args) $))
+                     required-keys))))
        (lua "return"))
      ;; Construct command
      (local {: owner
@@ -56,9 +61,9 @@
                          ["--owner" owner.value]
                          ["--repo"  repo.value]
                          ["--rev"   rev.value]
-                         [(if (= (?. ?fetchSubmodules :value) :true)
-                           "--fetchSubmodules"
-                           "")]))
+                         (if (= (?. ?fetchSubmodules :value) :true)
+                             ["--fetchSubmodules"]
+                             [])))
 
      {: cmd
       : args})
@@ -66,8 +71,9 @@
    ;; Fetch Cargo
    :buildRustPackage
    (fn [args]
-     (when (has-keys args
-                     [])
+     (local required-keys
+            [])
+     (when (has-keys args required-keys)
        (local cmd nil)
        (local args nil)
 
@@ -79,10 +85,11 @@
    ;; Fetch GIT
    :fetchgit
    (fn [args]
-     (when (has-keys args
-                     [:owner
-                      :repo
-                      :rev])
+     (local required-keys
+            [:owner
+             :repo
+             :rev])
+     (when (not (has-keys args required-keys))
         (local {: owner
                 : repo
                 : rev
@@ -92,9 +99,9 @@
         (local cmd "nix-prefetch-git")
 
         (local args (concat ["--no-deepClone"]
-                            [(if (= (?. ?fetchSubmodules :value) :true)
-                               "--fetch-submodules"
-                               "")]
+                            (if (= (?. ?fetchSubmodules :value) :true)
+                              ["--fetch-submodules"]
+                              [])
                             ["--quiet"
                              (string.format
                                "https://github.com/%s/%s.git"
