@@ -71,8 +71,9 @@
 
 
  local function _11_(args)
- if has_keys(args, {}) then
 
+ local required_keys = {}
+ if has_keys(args, required_keys) then
  local cmd = nil
  local args0 = nil
 
@@ -84,10 +85,11 @@
 
 
  local function _13_(args)
- if has_keys(args, {"owner", "repo", "rev"}) then
+
+ local required_keys = {"owner", "repo", "rev"}
 
 
-
+ if not has_keys(args, required_keys) then
  local _local_14_ = args local owner = _local_14_["owner"]
  local repo = _local_14_["repo"]
  local rev = _local_14_["rev"]

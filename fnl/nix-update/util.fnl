@@ -22,9 +22,14 @@
       (values k v))))
 
 (fn find-child [p? it]
-  (each [v _ it]
-    (when (p? v)
-      (lua "return v"))))
+  (each [child ?name it]
+    (when (p? child ?name)
+      (lua "return child"))))
+
+(fn find-children [p? it]
+  (icollect [child ?name it]
+    (when (p? child ?name)
+      child)))
 
 (fn has-keys [tbl keys]
   (all (fn [_ key]
@@ -81,6 +86,7 @@
  : map
  : filter
  : find-child
+ : find-children
  : has-keys
  : concat-two
  : call-command}
