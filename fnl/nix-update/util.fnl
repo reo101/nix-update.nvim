@@ -16,10 +16,25 @@
   (collect [k v (pairs tbl)]
     (values k (f v))))
 
+(fn imap [f seq]
+  (icollect [_ v (ipairs seq)]
+    (f v)))
+
 (fn filter [p? tbl]
   (collect [k v (pairs tbl)]
     (when (p? k v)
       (values k v))))
+
+(fn flatten [seq ?res]
+  (var res (or ?res []))
+  (if (vim.tbl_islist seq)
+    (each [_ v (pairs seq)]
+      (flatten v res))
+    ;; else (atom)
+    (tset res
+          (+ (length res) 1)
+          seq))
+  res)
 
 (fn find-child [p? it]
   (each [child ?name it]
@@ -84,7 +99,9 @@
 {: any
  : all
  : map
+ : imap
  : filter
+ : flatten
  : find-child
  : find-children
  : has-keys

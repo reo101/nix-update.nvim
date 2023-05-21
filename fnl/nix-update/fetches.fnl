@@ -2,8 +2,9 @@
         : get-prefetcher-extractor}
        (require :nix-update.prefetchers))
 
-(local {: find-child
-        : find-children
+(local {: imap
+        : flatten
+        : find-child
         : call-command}
        (require :nix-update.util))
 
@@ -23,6 +24,12 @@
     argument:
       (attrset_expression
         (binding_set) @_fargs)
+      ;; FIXME: make argument resolution work for a rec_attrset_expression
+      ;;
+      ;; [(attrset_expression
+      ;;    (binding_set) @_fargs)
+      ;;  (rec_attrset_expression
+      ;;    (binding_set) @_fargs)]
   ) @_fwhole
   (#any-of? @_fname %s)
 )
@@ -59,8 +66,8 @@
     (tree:root)))
 
 ;;; Find all local bindings
-;;; NOTE: `string` -> name of referenced variable
-;;;       `table` -> node + value of found definition
+;;; NOTE: `{: name}` -> name of referenced variable
+;;;       `{: node : value}` -> node + value of found definition
 (fn find-all-local-bindings [bounder ?bufnr]
   ;;; Get current buffer
   (local bufnr (or ?bufnr
@@ -78,40 +85,50 @@
     (match (binding:type)
       ;;; Classic binding
       "binding"
-      (let [attr       (find-child
-                         #(= ($1:type) "attrpath")
-                         (binding:iter_children))
-            attr-name  (when attr
-                         (vim.treesitter.get_node_text
-                           attr
-                           bufnr))
-            string-val (let [string-expression
-                              (find-child
-                                #(= ($1:type) "string_expression")
-                                (binding:iter_children))]
-                         ;;; TODO: iterate through all children:
-                         ;;;       - string_fragment -> direct
-                         ;;;       - interpolation -> indirecly
-                         (when string-expression
-                           (let [string-fragment
-                                  (find-child
-                                    #(= ($1:type) "string_fragment")
-                                    (string-expression:iter_children))]
-                             (when string-fragment
-                               {:node  string-fragment
-                                :value (vim.treesitter.get_node_text
-                                         string-fragment
-                                         bufnr)}))))
-            var-val    (let [variable-expression
+      (let [attr        (find-child
+                          #(= ($1:type) "attrpath")
+                          (binding:iter_children))
+            attr-name   (when attr
+                          (vim.treesitter.get_node_text
+                            attr
+                            bufnr))
+            string-expr (let [string-expression
+                               (find-child
+                                  #(= ($1:type) "string_expression")
+                                  (binding:iter_children))]
+                          (when string-expression
+                            (icollect [node _ (string-expression:iter_children)]
+                              (match (node:type)
+                                ;;; Variable reference
+                                "interpolation"
+                                (let [expression
+                                       (find-child
+                                         #(and (= ($1:type) "variable_expression")
+                                               (= $2 "expression"))
+                                         (node:iter_children))]
+                                  (when expression
+                                    ;;; Mark for search up
+                                    {:name (vim.treesitter.get_node_text
+                                            expression
+                                            bufnr)}))
+                                ;;; Final value - string
+                                "string_fragment"
+                                {:node  node
+                                 :value (vim.treesitter.get_node_text
+                                          node
+                                          bufnr)}))))
+            var-expr   (let [variable-expression
                               (find-child
                                 #(= ($1:type) "variable_expression")
                                 (binding:iter_children))]
                          (when variable-expression
-                           (vim.treesitter.get_node_text
-                             variable-expression
-                             bufnr)))
-            val (or string-val var-val)]
-        (tset bindings attr-name val))
+                           ;;; Mark for search up
+                           [{:name (vim.treesitter.get_node_text
+                                      variable-expression
+                                      bufnr)}]))
+            expr (or string-expr
+                     var-expr)]
+        (tset bindings attr-name expr))
       ;;; (Plain) inherit bindings
       "inherit"
       (let [attrs (find-child
@@ -126,16 +143,21 @@
                               node
                               bufnr)]
               ;;; NOTE: `inherit attr;` is the same as `attr = attr;`
-              (tset bindings attr-name attr-name)))))))
+              (tset bindings attr-name [{:name attr-name}])))))))
 
   ;;; Return the accumulated bindings
   bindings)
 
 ;;; Try finding bounded value
-(fn try-get-value [bounder name ?bufnr]
+;;; TODO: optimize to work for many identifiers
+(fn try-get-binding [bounder identifier ?bufnr]
   ;;; Get current buffer
   (local bufnr (or ?bufnr
                    (vim.api.nvim_get_current_buf)))
+
+  ;;; Early return if bounder is nil
+  (when (not bounder)
+    (lua "return nil"))
 
   ;;; Early return if not in a Nix file
   (when (not= (. vim :bo bufnr :filetype)
@@ -147,38 +169,55 @@
   (local bindings (find-all-local-bindings bounder bufnr))
 
   ;;; Evaluate all found local bindings
-  (let [binding (. bindings name)]
-    (match (type binding)
-      ;;; Found on this level - Done
-      "table"
-      binding
-      ;;; Missing/variable reference - Recurse up
-      other
-      (do
-        ;;; Find closest parent with a binding_set
-        ;;; (immediate parent would short-circuit the loop)
-        (var target (: (: bounder :parent) :parent))
-        (while (and target
-                    (not= (target:type) "rec_attrset_expression")
-                    (not= (target:type) "let_expression"))
-          (set target (target:parent)))
+  (let [binding (. bindings identifier)]
+    ;;; Find closest parent with a binding_set
+    ;;; (immediate parent would short-circuit the loop)
+    (var target (: (: bounder :parent) :parent))
+    (while (and target
+                (not= (target:type) "rec_attrset_expression")
+                (not= (target:type) "let_expression"))
+      (set target (target:parent)))
 
-        ;;; If we find such a parent
-        (when target
-          ;;; Step down into its binding_set
-          (set target
-               (find-child
-                 #(= ($:type) "binding_set")
-                 (target:iter_children)))
+    ;;; If we find such a parent
+    (when target
+      ;;; Step down into its binding_set
+      (set target
+           (find-child
+             #(= ($:type) "binding_set")
+             (target:iter_children))))
 
-          ;;; Check out what we are looking for
-          (match other
-            ;;; Recurse for directly referenced variable
-            "string"
-            (try-get-value target binding bufnr)
-            ;;; Recurse for original variable
-            "nil"
-            (try-get-value target name bufnr)))))))
+    (local
+      final-binding
+      (if binding
+         ;;; Table - Final value/Variable reference
+         (let [find-up
+                (fn [binding-part]
+                  (match binding-part
+                    ;;; Final value - Return
+                    {: node : value}
+                    {: node : value}
+                    ;;; Variable reference - Recurse up for name
+                    {: name}
+                    (try-get-binding target name bufnr)
+                    ;;; Nil - Error (unhandled)
+                    nil
+                    nil))
+               ;; BUG: might have `nil`s inside
+               full-binding-parts
+                (imap find-up binding)]
+           full-binding-parts)
+         ;;; Nil - Recurse up for same
+        (try-get-binding target binding bufnr)))
+
+    ;; Return the (flattened) `binding-part`s
+    (flatten final-binding)))
+
+;;; Concatinate all `binding-part`s from a binding
+(fn binding-to-value [binding]
+  (table.concat
+    (imap
+      #$.value
+      binding)))
 
 ;;; Get used fetches in bufnr
 (fn find-used-fetches [?bufnr]
@@ -203,28 +242,24 @@
            ;;; Construct a table from ...
            (collect [id node
                      (pairs matcher)]
-             (values
-               (. fetches-query :captures id)
-               (match (. fetches-query :captures id)
-                 ;;; ... the fetch name ...
-                 "_fname"
-                 (vim.treesitter.get_node_text node bufnr)
-                 ;;; ... its arguments ...
-                 "_fargs"
-                 (collect [name value (pairs (find-all-local-bindings node bufnr))]
-                   (match (type value)
-                     ;;; If found locally - use directly
-                     "table"
-                     (values name value)
-                     ;;; If not - start recursing
-                     "string"
-                     (let [value (try-get-value node name bufnr)]
-                       (when value
-                         (values name value)))))
-                 ;;; ... and the whole node
-                 ;;; (for checking whether the cursor is inside of it)
-                 "_fwhole"
-                 node)))))
+             (let [capture-id (. fetches-query :captures id)]
+               (values
+                 capture-id
+                 (match capture-id
+                   ;;; ... the fetch name ...
+                   "_fname"
+                   (vim.treesitter.get_node_text node bufnr)
+                   ;;; ... its arguments ...
+                   "_fargs"
+                   (collect [name _
+                             (pairs (find-all-local-bindings node bufnr))]
+                     (let [value (binding-to-value
+                                   (try-get-binding node name bufnr))]
+                       (values name value)))
+                   ;;; ... and the whole node
+                   ;;; (for checking whether the cursor is inside of it)
+                   "_fwhole"
+                   node))))))
 
   ;;; Return the accumulated fetches
   found-fetches)
@@ -302,7 +337,8 @@
     (each [key value (pairs (prefetcher-extractor res))]
       (local node (?. fetch-at-cursor :_fargs key :node))
       ;;; If if there's already such a node - update it
-      (if node
+      (match (?. fetch-at-cursor :_fargs key)
+        [{: node : value}]
         (let [(start-row start-col end-row end-col)
               (vim.treesitter.get_node_range node bufnr)]
           (vim.api.nvim_buf_set_text
@@ -313,6 +349,7 @@
             end-col
             [value]))
         ;;; If not - insert it at the end
+        _
         (let [(_start-row _start-col end-row _end-col)
               (vim.treesitter.get_node_range fetch-at-cursor._fwhole bufnr)]
           (vim.api.nvim_buf_set_lines
@@ -349,7 +386,8 @@
  : fetches-query
  : get-root
  : find-all-local-bindings
- : try-get-value
+ : try-get-binding
+ : binding-to-value
  : find-used-fetches
  : get-fetch-at-cursor
  : prefetch-fetch-at-cursor}

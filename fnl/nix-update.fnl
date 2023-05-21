@@ -2,7 +2,8 @@
         : fetches-names
         : fetches-query
         : get-root
-        : try-get-value
+        : try-get-binding
+        : binding-to-value
         : find-used-fetches
         : get-fetch-at-cursor
         : prefetch-fetch-at-cursor}
@@ -37,7 +38,8 @@
  :fetches_names            fetches-names
  :fetches_query            fetches-query
  :get_root                 get-root
- :try_get_value            try-get-value
+ :try_get_binding          try-get-binding
+ :binding_to_value         binding-to-value
  :find_used_fetches        find-used-fetches
  :get_fetch_at_cursor      get-fetch-at-cursor
  :prefetch_fetch_at_cursor prefetch-fetch-at-cursor

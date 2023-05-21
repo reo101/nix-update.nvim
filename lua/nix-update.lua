@@ -2,7 +2,8 @@
  local fetches_names = _local_1_["fetches-names"]
  local fetches_query = _local_1_["fetches-query"]
  local get_root = _local_1_["get-root"]
- local try_get_value = _local_1_["try-get-value"]
+ local try_get_binding = _local_1_["try-get-binding"]
+ local binding_to_value = _local_1_["binding-to-value"]
  local find_used_fetches = _local_1_["find-used-fetches"]
  local get_fetch_at_cursor = _local_1_["get-fetch-at-cursor"]
  local prefetch_fetch_at_cursor = _local_1_["prefetch-fetch-at-cursor"]
@@ -33,4 +34,4 @@
 
  local function _4_() return nix_update() end vim.api.nvim_create_user_command("NixUpdate", _4_, {})
 
- return {fetches_query_string = fetches_query_string, fetches_names = fetches_names, fetches_query = fetches_query, get_root = get_root, try_get_value = try_get_value, find_used_fetches = find_used_fetches, get_fetch_at_cursor = get_fetch_at_cursor, prefetch_fetch_at_cursor = prefetch_fetch_at_cursor, gen_prefetcher_cmd = gen_prefetcher_cmd, call_prefether = call_command, nix_update = nix_update}
+ return {fetches_query_string = fetches_query_string, fetches_names = fetches_names, fetches_query = fetches_query, get_root = get_root, try_get_binding = try_get_binding, binding_to_value = binding_to_value, find_used_fetches = find_used_fetches, get_fetch_at_cursor = get_fetch_at_cursor, prefetch_fetch_at_cursor = prefetch_fetch_at_cursor, gen_prefetcher_cmd = gen_prefetcher_cmd, call_prefether = call_command, nix_update = nix_update}
