@@ -62,37 +62,42 @@
  local function call_command(_13_, callback) local _arg_14_ = _13_ local cmd = _arg_14_["cmd"] local args = _arg_14_["args"]
 
  local stdout = uv.new_pipe()
+ local stderr = uv.new_pipe()
 
 
- local options = {args = args, stdio = {nil, stdout, nil}}
+ local options = {args = args, stdio = {nil, stdout, stderr}}
 
 
 
  local handle = nil
 
 
- local result = {}
+ local result = {stdout = {}, stderr = {}}
+
 
 
  local on_exit local function _15_(_status)
- uv.read_stop(stdout)
- uv.close(stdout)
+ for _, pipe in pairs({stdout, stderr}) do
+ uv.read_stop(pipe)
+ uv.close(pipe) end
  uv.close(handle)
  local function _16_() return callback(result) end return vim.schedule(_16_) end on_exit = _15_
 
 
- local on_read local function _17_(_status, data)
+ local on_read local function _17_(pipe)
+ local function _18_(_status, data)
  if data then
  local vals = vim.split(data, "\n")
  for _, val in ipairs(vals) do
  if (val ~= "") then
- table.insert(result, val) else end end return nil else return nil end end on_read = _17_
+ table.insert(result[pipe], val) else end end return nil else return nil end end return _18_ end on_read = _17_
 
 
  handle = uv.spawn(cmd, options, on_exit)
 
 
- uv.read_start(stdout, on_read)
+ uv.read_start(stdout, on_read("stdout"))
+ uv.read_start(stderr, on_read("stderr"))
 
  return nil end
 

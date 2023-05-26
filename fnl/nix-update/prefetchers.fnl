@@ -40,6 +40,7 @@
             [:owner
              :repo
              :rev])
+
      (when (not (has-keys args required-keys))
        (vim.notify
          (string.format
@@ -48,6 +49,7 @@
              (filter #(not (vim.list_contains (map #$1 args) $))
                      required-keys))))
        (lua "return"))
+
      ;; Construct command
      (local {: owner
              : repo
@@ -58,9 +60,9 @@
      (local cmd "nix-prefetch")
 
      (local args (concat ["fetchFromGitHub"]
-                         ["--owner" owner.value]
-                         ["--repo"  repo.value]
-                         ["--rev"   rev.value]
+                         ["--owner" owner]
+                         ["--repo"  repo]
+                         ["--rev"   rev]
                          (if (= (?. ?fetchSubmodules :value) :true)
                              ["--fetchSubmodules"]
                              [])))
@@ -105,9 +107,9 @@
                             ["--quiet"
                              (string.format
                                "https://github.com/%s/%s.git"
-                               owner.value
-                               repo.value)
-                             rev.value]))
+                               owner
+                               repo)
+                             rev]))
 
         ;; (local res (-> (concat [cmd] args)
         ;;                (vim.fn.system)
@@ -120,8 +122,8 @@
 (local get-prefetcher-extractor
   {;; Github
    :fetchFromGitHub
-   (fn [res]
-     {:sha256 (. res 1)})})
+   (fn [stdout]
+     {:sha256 (. stdout 1)})})
 
 {: gen-prefetcher-cmd
  : get-prefetcher-extractor}

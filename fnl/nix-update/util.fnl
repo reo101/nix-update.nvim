@@ -62,37 +62,42 @@
 (fn call-command [{: cmd : args} callback]
   ;; Define pipes
   (local stdout (uv.new_pipe))
+  (local stderr (uv.new_pipe))
 
   ;; Define options
   (local options {: args
-                  :stdio [nil stdout nil]})
+                  :stdio [nil stdout stderr]})
 
   ;; Declare handle
   (var handle nil)
 
   ;; Define result (will be appended to by `on-read`)
-  (var result {})
+  (var result {:stdout []
+               :stderr []})
 
   ;; Define on-exit handler
   (local on-exit (fn [_status]
-                   (uv.read_stop stdout)
-                   (uv.close stdout)
+                   (each [_ pipe (pairs [stdout stderr])]
+                     (uv.read_stop pipe)
+                     (uv.close pipe))
                    (uv.close handle)
                    (vim.schedule #(callback result))))
 
-  ;; Define on-read handler (will append to `result`)
-  (local on-read (fn [_status data]
-                   (when data
-                     (local vals (vim.split data "\n"))
-                     (each [_ val (ipairs vals)]
-                       (when (not= val "")
-                         (table.insert result val))))))
+  ;; Define on-read handlers (will append to `result`)
+  (local on-read (fn [pipe]
+                   (fn [_status data]
+                     (when data
+                       (local vals (vim.split data "\n"))
+                       (each [_ val (ipairs vals)]
+                         (when (not= val "")
+                           (table.insert (. result pipe) val)))))))
 
   ;; Spawn command
   (set handle (uv.spawn cmd options on-exit))
 
   ;; Start reading
-  (uv.read_start stdout on-read)
+  (uv.read_start stdout (on-read :stdout))
+  (uv.read_start stderr (on-read :stderr))
 
   nil)
 

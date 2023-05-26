@@ -2,7 +2,8 @@
         : get-prefetcher-extractor}
        (require :nix-update.prefetchers))
 
-(local {: imap
+(local {: map
+        : imap
         : flatten
         : find-child
         : call-command}
@@ -253,8 +254,7 @@
                    "_fargs"
                    (collect [name _
                              (pairs (find-all-local-bindings node bufnr))]
-                     (let [value (binding-to-value
-                                   (try-get-binding node name bufnr))]
+                     (let [value (try-get-binding node name bufnr)]
                        (values name value)))
                    ;;; ... and the whole node
                    ;;; (for checking whether the cursor is inside of it)
@@ -310,7 +310,9 @@
 
   ;;; Get the commands components
   (local prefetcher-cmd
-         (prefetcher fetch-at-cursor._fargs))
+         (prefetcher
+           (map binding-to-value
+                fetch-at-cursor._fargs)))
 
   ;;; Early return if invalid
   (when (= prefetcher-cmd nil)
@@ -333,11 +335,15 @@
     (lua "return"))
 
   ;;; Update the values of the new prefetched fields
-  (fn sed [res]
-    (each [key value (pairs (prefetcher-extractor res))]
-      (local node (?. fetch-at-cursor :_fargs key :node))
-      ;;; If if there's already such a node - update it
+  (fn sed [{: stdout : stderr}]
+    (when (= (length stdout) 0)
+      (vim.print stderr)
+      (lua "return"))
+    (each [key new-value (pairs (prefetcher-extractor stdout))]
+      (vim.print (?. fetch-at-cursor :_fargs key))
       (match (?. fetch-at-cursor :_fargs key)
+        ;;; If if there's already such a node - update it
+        ;;; TODO: regexify if multi-fragment?
         [{: node : value}]
         (let [(start-row start-col end-row end-col)
               (vim.treesitter.get_node_range node bufnr)]
@@ -347,7 +353,7 @@
             start-col
             end-row
             end-col
-            [value]))
+            [new-value]))
         ;;; If not - insert it at the end
         _
         (let [(_start-row _start-col end-row _end-col)
@@ -360,7 +366,7 @@
             [(string.format
                "%s = \"%s\";"
                key
-               value)])
+               new-value)])
           ;;; TODO:
           ;;; nvim_buf_set_mark
           ;;; nvim_win_set_cursor

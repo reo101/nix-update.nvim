@@ -2,7 +2,8 @@
  local get_prefetcher_extractor = _local_1_["get-prefetcher-extractor"]
 
 
- local _local_2_ = require("nix-update.util") local imap = _local_2_["imap"]
+ local _local_2_ = require("nix-update.util") local map = _local_2_["map"]
+ local imap = _local_2_["imap"]
  local flatten = _local_2_["flatten"]
  local find_child = _local_2_["find-child"]
  local call_command = _local_2_["call-command"] local fetches_query_string = "\n(\n  (apply_expression\n    function:\n      [(variable_expression\n         name: (identifier) @_fname)\n       (select_expression\n         attrpath:\n           (attrpath\n             attr: (identifier) @_fname\n             .))]\n    argument:\n      (attrset_expression\n        (binding_set) @_fargs)\n      ;; FIXME: make argument resolution work for a rec_attrset_expression\n      ;;\n      ;; [(attrset_expression\n      ;;    (binding_set) @_fargs)\n      ;;  (rec_attrset_expression\n      ;;    (binding_set) @_fargs)]\n  ) @_fwhole\n  (#any-of? @_fname %s)\n)\n       "
@@ -253,8 +254,7 @@
 
  for name, _ in pairs(find_all_local_bindings(node, bufnr)) do local k_15_auto0, v_16_auto0 = nil, nil
 
- do local value = binding_to_value(try_get_binding(node, name, bufnr))
-
+ do local value = try_get_binding(node, name, bufnr)
  k_15_auto0, v_16_auto0 = name, value end if ((k_15_auto0 ~= nil) and (v_16_auto0 ~= nil)) then tbl_14_auto0[k_15_auto0] = v_16_auto0 else end end return tbl_14_auto0 elseif (_33_ == "_fwhole") then
 
 
@@ -310,7 +310,9 @@
 
 
 
- local prefetcher_cmd = prefetcher(fetch_at_cursor._fargs)
+ local prefetcher_cmd = prefetcher(map(binding_to_value, fetch_at_cursor._fargs))
+
+
 
 
  if (prefetcher_cmd == nil) then
@@ -333,15 +335,19 @@
  return else end
 
 
- local function sed(res)
- for key, value in pairs(prefetcher_extractor(res)) do
- local node do local t_49_ = fetch_at_cursor if (nil ~= t_49_) then t_49_ = (t_49_)._fargs else end if (nil ~= t_49_) then t_49_ = (t_49_)[key] else end if (nil ~= t_49_) then t_49_ = (t_49_).node else end node = t_49_ end
+ local function sed(_49_) local _arg_50_ = _49_ local stdout = _arg_50_["stdout"] local stderr = _arg_50_["stderr"]
+ if (#stdout == 0) then
+ vim.print(stderr)
+ return else end
+ for key, new_value in pairs(prefetcher_extractor(stdout)) do
+ local function _53_() local t_52_ = fetch_at_cursor if (nil ~= t_52_) then t_52_ = (t_52_)._fargs else end if (nil ~= t_52_) then t_52_ = (t_52_)[key] else end return t_52_ end vim.print(_53_())
+ local _56_ do local t_57_ = fetch_at_cursor if (nil ~= t_57_) then t_57_ = (t_57_)._fargs else end if (nil ~= t_57_) then t_57_ = (t_57_)[key] else end _56_ = t_57_ end if ((_G.type(_56_) == "table") and ((_G.type((_56_)[1]) == "table") and (nil ~= ((_56_)[1]).node) and (nil ~= ((_56_)[1]).value))) then local node = ((_56_)[1]).node local value = ((_56_)[1]).value
 
- local _53_ do local t_54_ = fetch_at_cursor if (nil ~= t_54_) then t_54_ = (t_54_)._fargs else end if (nil ~= t_54_) then t_54_ = (t_54_)[key] else end _53_ = t_54_ end if ((_G.type(_53_) == "table") and ((_G.type((_53_)[1]) == "table") and (((_53_)[1]).node == node) and (((_53_)[1]).value == value))) then
+
 
 
  local start_row, start_col, end_row, end_col = vim.treesitter.get_node_range(node, bufnr)
- vim.api.nvim_buf_set_text(bufnr, start_row, start_col, end_row, end_col, {value}) elseif true then local _ = _53_
+ vim.api.nvim_buf_set_text(bufnr, start_row, start_col, end_row, end_col, {new_value}) elseif true then local _ = _56_
 
 
 
@@ -352,7 +358,7 @@
 
 
  local _start_row, _start_col, end_row, _end_col = vim.treesitter.get_node_range(fetch_at_cursor._fwhole, bufnr)
- vim.api.nvim_buf_set_lines(bufnr, end_row, end_row, true, {string.format("%s = \"%s\";", key, value)})
+ vim.api.nvim_buf_set_lines(bufnr, end_row, end_row, true, {string.format("%s = \"%s\";", key, new_value)})
 
 
 
