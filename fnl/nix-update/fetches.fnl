@@ -67,8 +67,8 @@
     (tree:root)))
 
 ;;; Find all local bindings
-;;; NOTE: `{: name}` -> name of referenced variable
-;;;       `{: node : value}` -> node + value of found definition
+;;; NOTE: `{: ?interp : name}` -> name of referenced variable
+;;;       `{: ?interp : node : value}` -> node + value of found definition
 (fn find-all-local-bindings [bounder ?bufnr]
   ;;; Get current buffer
   (local bufnr (or ?bufnr
@@ -109,9 +109,10 @@
                                          (node:iter_children))]
                                   (when expression
                                     ;;; Mark for search up
-                                    {:name (vim.treesitter.get_node_text
-                                            expression
-                                            bufnr)}))
+                                    {:?interp node
+                                     :name    (vim.treesitter.get_node_text
+                                               expression
+                                               bufnr)}))
                                 ;;; Final value - string
                                 "string_fragment"
                                 {:node  node
@@ -192,28 +193,33 @@
       (if binding
          ;;; Table - Final value/Variable reference
          (let [find-up
-                (fn [binding-part]
-                  (match binding-part
+                (fn [fragment]
+                  (match fragment
                     ;;; Final value - Return
-                    {: node : value}
-                    {: node : value}
+                    {: ?interp : node : value}
+                    {: ?interp : node : value}
                     ;;; Variable reference - Recurse up for name
-                    {: name}
-                    (try-get-binding target name bufnr)
+                    {: ?interp : name}
+                    (let [resolved (flatten (try-get-binding target name bufnr))]
+                      ;;; When no upper-level interpolation - keep old one
+                      (each [i fragment (ipairs resolved)]
+                        (when (not fragment.?interp)
+                          (tset fragment :?interp ?interp)))
+                      resolved)
                     ;;; Nil - Error (unhandled)
                     nil
                     nil))
                ;; BUG: might have `nil`s inside
-               full-binding-parts
+               full-fragments
                 (imap find-up binding)]
-           full-binding-parts)
+           full-fragments)
          ;;; Nil - Recurse up for same
         (try-get-binding target binding bufnr)))
 
-    ;; Return the (flattened) `binding-part`s
+    ;; Return the (flattened) `fragment`s
     (flatten final-binding)))
 
-;;; Concatinate all `binding-part`s from a binding
+;;; Concatinate all `fragment`s from a binding
 (fn binding-to-value [binding]
   (table.concat
     (imap
@@ -339,44 +345,100 @@
     (when (= (length stdout) 0)
       (vim.print stderr)
       (lua "return"))
+
+    (fn coords [node]
+      (let [(start-row start-col end-row end-col)
+            (vim.treesitter.get_node_range node bufnr)]
+        {: start-row
+         : start-col
+         : end-row
+         : end-col}))
+
     (each [key new-value (pairs (prefetcher-extractor stdout))]
-      (vim.print (?. fetch-at-cursor :_fargs key))
-      (match (?. fetch-at-cursor :_fargs key)
-        ;;; If if there's already such a node - update it
-        ;;; TODO: regexify if multi-fragment?
-        [{: node : value}]
-        (let [(start-row start-col end-row end-col)
-              (vim.treesitter.get_node_range node bufnr)]
-          (vim.api.nvim_buf_set_text
-            bufnr
-            start-row
-            start-col
-            end-row
-            end-col
-            [new-value]))
-        ;;; If not - insert it at the end
-        _
-        (let [(_start-row _start-col end-row _end-col)
-              (vim.treesitter.get_node_range fetch-at-cursor._fwhole bufnr)]
-          (vim.api.nvim_buf_set_lines
-            bufnr
-            end-row
-            end-row
-            true
-            [(string.format
-               "%s = \"%s\";"
-               key
-               new-value)])
-          ;;; TODO:
-          ;;; nvim_buf_set_mark
-          ;;; nvim_win_set_cursor
-          ;;; ==
-          ;;; nvim_buf_get_mark
-          ;;; nvim_win_set_cursor
-          (vim.cmd
-            (string.format
-              "normal ma%sggj==`a"
-              end-row)))))
+      (local existing (?. fetch-at-cursor :_fargs key))
+      (if existing
+          ;;; If already exists - update
+          (do
+            (var i-fragment  1)
+            (var i-new-value 1)
+            (var short-circuit? false)
+            (while (and (not short-circuit?)
+                       (<= i-new-value (length new-value)))
+              (let [fragment                   (. existing i-fragment)
+                    {:?interp fragment-?interp
+                     :node    fragment-node
+                     :value   fragment-value}  fragment]
+                (if
+                  ;;; TODO: handle unexpected ends
+                  false
+                  nil
+                  ;;; If fragment is same - leave alone
+                  (= (string.sub new-value
+                                 i-new-value
+                                 (+ i-new-value
+                                    (length fragment-value)
+                                    -1))
+                     fragment-value)
+                  (do
+                    (set i-fragment  (+ i-fragment  1))
+                    (set i-new-value (+ i-new-value (length fragment-value))))
+                  ;;; If on last fragment - update it
+                  (= i-fragment (length existing))
+                  (do
+                    (local {: start-row : start-col : end-row : end-col}
+                           (coords fragment-node))
+                    (vim.api.nvim_buf_set_text
+                      bufnr
+                      start-row
+                      start-col
+                      end-row
+                      end-col
+                      [(string.sub new-value i-new-value)])
+                    (set short-circuit? true))
+                  ;;; If neither - nuke
+                  (do
+                    ;;; TODO: collect all discarded interpolated fragments
+                    ;;;       and report to the user that they are invalidated
+                    (local last-fragment
+                           (. existing (length existing)))
+                    (local {:?interp last-fragment-?interp
+                            :node    last-fragment-node}
+                           last-fragment)
+                    (local {: start-row : start-col} (coords (or fragment-?interp
+                                                                 fragment-node)))
+                    (local {: end-row : end-col} (coords (or last-fragment-?interp
+                                                             last-fragment-node)))
+                    (vim.api.nvim_buf_set_text
+                      bufnr
+                      start-row
+                      start-col
+                      end-row
+                      end-col
+                      [(string.sub new-value i-new-value)])
+                    (set short-circuit? true))))))
+          ;;; If not - insert it at the end
+          (let [(_start-row _start-col end-row _end-col)
+                (vim.treesitter.get_node_range fetch-at-cursor._fwhole bufnr)]
+            (vim.api.nvim_buf_set_lines
+              bufnr
+              end-row
+              end-row
+              true
+              [(string.format
+                 "%s = \"%s\";"
+                 key
+                 new-value)])
+            ;;; TODO:
+            ;;; nvim_buf_set_mark
+            ;;; nvim_win_set_cursor
+            ;;; ==
+            ;;; nvim_buf_get_mark
+            ;;; nvim_win_set_cursor
+            (vim.cmd
+              (string.format
+                "normal ma%sggj==`a"
+                end-row)))))
+
     (vim.notify "Prefetch complete!"))
 
   ;;; Call the command (will see results through `sed`)
