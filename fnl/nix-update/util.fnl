@@ -20,10 +20,10 @@
   (icollect [_ v (ipairs seq)]
     (f v)))
 
-(fn filter [p? tbl]
-  (collect [k v (pairs tbl)]
-    (when (p? k v)
-      (values k v))))
+(fn filter [p? seq]
+  (icollect [_ v (ipairs seq)]
+    (when (p? v)
+      v)))
 
 (fn flatten [seq ?res]
   (var res (or ?res []))

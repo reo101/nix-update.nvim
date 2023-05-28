@@ -20,10 +20,10 @@
  local i_18_auto = #tbl_17_auto for _, v in ipairs(seq) do
  local val_19_auto = f(v) if (nil ~= val_19_auto) then i_18_auto = (i_18_auto + 1) do end (tbl_17_auto)[i_18_auto] = val_19_auto else end end return tbl_17_auto end
 
- local function filter(p_3f, tbl) local tbl_14_auto = {}
- for k, v in pairs(tbl) do local k_15_auto, v_16_auto = nil, nil
- if p_3f(k, v) then
- k_15_auto, v_16_auto = k, v else k_15_auto, v_16_auto = nil end if ((k_15_auto ~= nil) and (v_16_auto ~= nil)) then tbl_14_auto[k_15_auto] = v_16_auto else end end return tbl_14_auto end
+ local function filter(p_3f, seq) local tbl_17_auto = {}
+ local i_18_auto = #tbl_17_auto for _, v in ipairs(seq) do local val_19_auto
+ if p_3f(v) then
+ val_19_auto = v else val_19_auto = nil end if (nil ~= val_19_auto) then i_18_auto = (i_18_auto + 1) do end (tbl_17_auto)[i_18_auto] = val_19_auto else end end return tbl_17_auto end
 
  local function flatten(seq, _3fres)
  local res = (_3fres or {})

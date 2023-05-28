@@ -417,8 +417,7 @@
                       [(string.sub new-value i-new-value)])
                     (set short-circuit? true))))))
           ;;; If not - insert it at the end
-          (let [(_start-row _start-col end-row _end-col)
-                (vim.treesitter.get_node_range fetch-at-cursor._fwhole bufnr)]
+          (let [{: end-row} (coords fetch-at-cursor._fwhole)]
             (vim.api.nvim_buf_set_lines
               bufnr
               end-row

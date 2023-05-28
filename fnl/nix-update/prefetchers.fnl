@@ -35,95 +35,101 @@
 (local gen-prefetcher-cmd
   {;; Github
    :fetchFromGitHub
-   (fn [args]
-     (local required-keys
-            [:owner
-             :repo
-             :rev])
+   {:keys [:owner
+           :repo
+           :rev]
+    :prefetch
+    (fn [{: owner
+          : repo
+          : rev
+          : ?fetchSubmodules}]
+      (local cmd "nix-prefetch")
 
-     (when (not (has-keys args required-keys))
-       (vim.notify
-         (string.format
-           "Missing keys: %s"
-           (vim.inspect
-             (filter #(not (vim.list_contains (map #$1 args) $))
-                     required-keys))))
-       (lua "return"))
+      (local args (concat ["fetchFromGitHub"]
+                          ["--owner" owner]
+                          ["--repo"  repo]
+                          ["--rev"   rev]
+                          (if (= (?. ?fetchSubmodules :value) :true)
+                              ["--fetchSubmodules"]
+                              [])))
 
-     ;; Construct command
-     (local {: owner
-             : repo
-             : rev
-             : ?fetchSubmodules}
-            args)
-
-     (local cmd "nix-prefetch")
-
-     (local args (concat ["fetchFromGitHub"]
-                         ["--owner" owner]
-                         ["--repo"  repo]
-                         ["--rev"   rev]
-                         (if (= (?. ?fetchSubmodules :value) :true)
-                             ["--fetchSubmodules"]
-                             [])))
-
-     {: cmd
-      : args})
+      {: cmd
+       : args})}
 
    ;; Fetch Cargo
    :buildRustPackage
-   (fn [args]
-     (local required-keys
-            [])
-     (when (has-keys args required-keys)
-       (local cmd nil)
-       (local args nil)
+   {:required-keys []
+    :prefetch
+    (fn [{}]
+      (local cmd nil)
 
-       ;; nix-prefetch '{ sha256 }: i3status-rust.cargoDeps.overrideAttrs (_: { cargoSha256 = sha256; })'
+      (local args nil)
 
-       {: cmd
-        : args}))
+      ;; nix-prefetch '{ sha256 }: i3status-rust.cargoDeps.overrideAttrs (_: { cargoSha256 = sha256; })'
+
+      {: cmd
+       : args})}
 
    ;; Fetch GIT
    :fetchgit
-   (fn [args]
-     (local required-keys
-            [:owner
-             :repo
-             :rev])
-     (when (not (has-keys args required-keys))
-        (local {: owner
-                : repo
-                : rev
-                : ?fetchSubmodules}
-               args)
+   {:required-keys [:owner
+                    :repo
+                    :rev]
+    :prefetch
+    (fn [{: owner
+          : repo
+          : rev
+          : ?fetchSubmodules}]
+      (local cmd "nix-prefetch-git")
 
-        (local cmd "nix-prefetch-git")
+      (local args (concat ["--no-deepClone"]
+                          (if (= (?. ?fetchSubmodules :value) :true)
+                            ["--fetch-submodules"]
+                            [])
+                          ["--quiet"
+                           (string.format
+                             "https://github.com/%s/%s.git"
+                             owner
+                             repo)
+                           rev]))
 
-        (local args (concat ["--no-deepClone"]
-                            (if (= (?. ?fetchSubmodules :value) :true)
-                              ["--fetch-submodules"]
-                              [])
-                            ["--quiet"
-                             (string.format
-                               "https://github.com/%s/%s.git"
-                               owner
-                               repo)
-                             rev]))
+      ;; (local res (-> (concat [cmd] args)
+      ;;                (vim.fn.system)
+      ;;                (vim.json.decode)))))})
 
-        ;; (local res (-> (concat [cmd] args)
-        ;;                (vim.fn.system)
-        ;;                (vim.json.decode)))))})
-
-        {: cmd
-         : args}))})
+      {: cmd
+       : args})}})
 
 ;;; Define the pre-fetchers' response extractors (cmd result -> new fields)
 (local get-prefetcher-extractor
   {;; Github
    :fetchFromGitHub
    (fn [stdout]
-     {:sha256 (. stdout 1)})})
+     {:sha256 (. stdout 1)})
+
+   ;; Test
+   :fetchTest
+   (fn [stdout]
+     {:rev (. stdout 1)})})
+
+;;; Make all gen-prefetcher-cmd tables callable (for common error handling)
+(let [mt {:__call
+          (fn [self args]
+            (when (not (has-keys args self.required-keys))
+              (vim.notify
+                (string.format
+                  "Missing keys: %s"
+                  (vim.inspect
+                    (filter
+                      #(not (vim.list_contains
+                              (vim.tbl_keys args)
+                              $))
+                      self.required-keys))))
+              (lua "return"))
+
+            (self.prefetch args))}]
+  (each [_ prefetcher (pairs gen-prefetcher-cmd)]
+    (setmetatable prefetcher mt)))
 
 {: gen-prefetcher-cmd
  : get-prefetcher-extractor}

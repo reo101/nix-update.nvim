@@ -35,75 +35,57 @@
  local gen_prefetcher_cmd
 
 
- local function _2_(args)
-
- local required_keys = {"owner", "repo", "rev"}
-
-
-
- if not has_keys(args, required_keys) then
 
 
 
 
- local function _3_(_241) local function _4_(_2410) return _2410 end return not vim.list_contains(map(_4_, args), _241) end vim.notify(string.format("Missing keys: %s", vim.inspect(filter(_3_, required_keys))))
+ local function _4_(_2_) local _arg_3_ = _2_ local owner = _arg_3_["owner"]
+ local repo = _arg_3_["repo"]
+ local rev = _arg_3_["rev"]
+ local _3ffetchSubmodules = _arg_3_["?fetchSubmodules"] local cmd = "nix-prefetch"
 
- return else end
 
-
- local _local_6_ = args local owner = _local_6_["owner"]
- local repo = _local_6_["repo"]
- local rev = _local_6_["rev"]
- local _3ffetchSubmodules = _local_6_["?fetchSubmodules"] local cmd = "nix-prefetch"
+ local args
 
 
 
-
- local args0
-
-
-
- local function _10_() local _8_ do local t_7_ = _3ffetchSubmodules if (nil ~= t_7_) then t_7_ = (t_7_).value else end _8_ = t_7_ end if (_8_ == "true") then
+ local function _8_() local _6_ do local t_5_ = _3ffetchSubmodules if (nil ~= t_5_) then t_5_ = (t_5_).value else end _6_ = t_5_ end if (_6_ == "true") then
  return {"--fetchSubmodules"} else
- return {} end end args0 = concat_two(concat_two(concat_two(concat_two(concat_two({}, {"fetchFromGitHub"}), {"--owner", owner}), {"--repo", repo}), {"--rev", rev}), _10_())
+ return {} end end args = concat_two(concat_two(concat_two(concat_two(concat_two({}, {"fetchFromGitHub"}), {"--owner", owner}), {"--repo", repo}), {"--rev", rev}), _8_())
 
- return {cmd = cmd, args = args0} end
-
-
+ return {cmd = cmd, args = args} end
 
 
- local function _11_(args)
 
- local required_keys = {}
- if has_keys(args, required_keys) then
+
+
+
+ local function _11_(_9_) local _arg_10_ = _9_
  local cmd = nil
- local args0 = nil
+
+ local args = nil
 
 
 
- return {cmd = cmd, args = args0} else return nil end end
-
-
-
-
- local function _13_(args)
-
- local required_keys = {"owner", "repo", "rev"}
-
-
- if not has_keys(args, required_keys) then
- local _local_14_ = args local owner = _local_14_["owner"]
- local repo = _local_14_["repo"]
- local rev = _local_14_["rev"]
- local _3ffetchSubmodules = _local_14_["?fetchSubmodules"] local cmd = "nix-prefetch-git"
+ return {cmd = cmd, args = args} end
 
 
 
 
- local args0
+
+
+
+
+ local function _14_(_12_) local _arg_13_ = _12_ local owner = _arg_13_["owner"]
+ local repo = _arg_13_["repo"]
+ local rev = _arg_13_["rev"]
+ local _3ffetchSubmodules = _arg_13_["?fetchSubmodules"] local cmd = "nix-prefetch-git"
+
+
+ local args
  local function _18_() local _16_ do local t_15_ = _3ffetchSubmodules if (nil ~= t_15_) then t_15_ = (t_15_).value else end _16_ = t_15_ end if (_16_ == "true") then
  return {"--fetch-submodules"} else
- return {} end end args0 = concat_two(concat_two(concat_two({}, {"--no-deepClone"}), _18_()), {"--quiet", string.format("https://github.com/%s/%s.git", owner, repo), rev})
+ return {} end end args = concat_two(concat_two(concat_two({}, {"--no-deepClone"}), _18_()), {"--quiet", string.format("https://github.com/%s/%s.git", owner, repo), rev})
 
 
 
@@ -115,14 +97,38 @@
 
 
 
- return {cmd = cmd, args = args0} else return nil end end gen_prefetcher_cmd = {fetchFromGitHub = _2_, buildRustPackage = _11_, fetchgit = _13_}
+ return {cmd = cmd, args = args} end gen_prefetcher_cmd = {fetchFromGitHub = {keys = {"owner", "repo", "rev"}, prefetch = _4_}, buildRustPackage = {["required-keys"] = {}, prefetch = _11_}, fetchgit = {["required-keys"] = {"owner", "repo", "rev"}, prefetch = _14_}}
 
 
 
  local get_prefetcher_extractor
 
 
+ local function _19_(stdout)
+ return {sha256 = stdout[1]} end
+
+
+
  local function _20_(stdout)
- return {sha256 = stdout[1]} end get_prefetcher_extractor = {fetchFromGitHub = _20_}
+ return {rev = stdout[1]} end get_prefetcher_extractor = {fetchFromGitHub = _19_, fetchTest = _20_}
+
+
+ do local mt
+ local function _21_(self, args)
+ if not has_keys(args, self["required-keys"]) then
+
+
+
+
+
+ local function _22_(_241) return not vim.list_contains(vim.tbl_keys(args), _241) end vim.notify(string.format("Missing keys: %s", vim.inspect(filter(_22_, self["required-keys"]))))
+
+
+
+ return else end
+
+ return self.prefetch(args) end mt = {__call = _21_}
+ for _, prefetcher in pairs(gen_prefetcher_cmd) do
+ setmetatable(prefetcher, mt) end end
 
  return {["gen-prefetcher-cmd"] = gen_prefetcher_cmd, ["get-prefetcher-extractor"] = get_prefetcher_extractor}

@@ -362,24 +362,12 @@
 
 
 
-
  while (not short_circuit_3f and (i_new_value <= #new_value)) do
 
  local fragment = existing[i_fragment]
  local _let_56_ = fragment local fragment__3finterp = _let_56_["?interp"]
  local fragment_node = _let_56_["node"]
  local fragment_value = _let_56_["value"]
- vim.print(i_fragment)
- vim.print(i_new_value)
- vim.print(fragment)
- vim.print(string.sub(new_value, i_new_value, (i_new_value + #fragment_value + -1)))
-
-
-
-
-
-
- vim.print("-------------------")
  if false then elseif (string.sub(new_value, i_new_value, (i_new_value + #fragment_value + -1)) == fragment_value) then
 
 
@@ -429,8 +417,7 @@
 
 
 
-
- local _start_row, _start_col, end_row, _end_col = vim.treesitter.get_node_range(fetch_at_cursor._fwhole, bufnr)
+ local _let_62_ = coords(fetch_at_cursor._fwhole) local end_row = _let_62_["end-row"]
  vim.api.nvim_buf_set_lines(bufnr, end_row, end_row, true, {string.format("%s = \"%s\";", key, new_value)})
 
 
