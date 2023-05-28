@@ -2,27 +2,27 @@
 
 (fn any [p? tbl]
   (each [k v (pairs tbl)]
-    (when (p? k v)
+    (when (p? {: k : v})
       (lua "return true")))
   false)
 
 (fn all [p? tbl]
   (each [k v (pairs tbl)]
-    (when (not (p? k v))
+    (when (not (p? {: k : v}))
       (lua "return false")))
   true)
 
 (fn map [f tbl]
   (collect [k v (pairs tbl)]
-    (values k (f v))))
+    (values (f {: k : v}))))
 
 (fn imap [f seq]
-  (icollect [_ v (ipairs seq)]
-    (f v)))
+  (icollect [k v (ipairs seq)]
+    (f {: k : v})))
 
 (fn filter [p? seq]
-  (icollect [_ v (ipairs seq)]
-    (when (p? v)
+  (icollect [k v (ipairs seq)]
+    (when (p? {: k : v})
       v)))
 
 (fn flatten [seq ?res]
@@ -36,22 +36,22 @@
           seq))
   res)
 
-(fn find-child [p? it]
-  (each [child ?name it]
+(fn find-child [p? node]
+  (each [child ?name (node:iter_children)]
     (when (p? child ?name)
       (lua "return child"))))
 
-(fn find-children [p? it]
-  (icollect [child ?name it]
+(fn find-children [p? node]
+  (icollect [child ?name (node:iter_children)]
     (when (p? child ?name)
       child)))
 
-(fn has-keys [tbl keys]
-  (all (fn [_ key]
-         (any (fn [k _]
-                (= k key))
-              tbl))
-       keys))
+(fn missing-keys [tbl keys]
+  (filter (fn [{:k key}]
+            (any (fn [{: k}]
+                   (= k key))
+                 tbl))
+          keys))
 
 (fn concat-two [xs ys]
   (each [_ y (ipairs ys)]
@@ -109,6 +109,6 @@
  : flatten
  : find-child
  : find-children
- : has-keys
+ : missing-keys
  : concat-two
  : call-command}

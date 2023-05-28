@@ -1,6 +1,5 @@
-(local {: map
-        : filter
-        : has-keys
+(local {: filter
+        : missing-keys
         : concat-two}
        (require :nix-update.util))
 
@@ -35,9 +34,10 @@
 (local gen-prefetcher-cmd
   {;; Github
    :fetchFromGitHub
-   {:keys [:owner
-           :repo
-           :rev]
+   {:required-cmds [:nix-prefetch]
+    :required-keys [:owner
+                    :repo
+                    :rev]
     :prefetch
     (fn [{: owner
           : repo
@@ -58,7 +58,8 @@
 
    ;; Fetch Cargo
    :buildRustPackage
-   {:required-keys []
+   {:required-cmds []
+    :required-keys []
     :prefetch
     (fn [{}]
       (local cmd nil)
@@ -72,7 +73,8 @@
 
    ;; Fetch GIT
    :fetchgit
-   {:required-keys [:owner
+   {:required-cmds []
+    :required-keys [:owner
                     :repo
                     :rev]
     :prefetch
@@ -105,28 +107,32 @@
   {;; Github
    :fetchFromGitHub
    (fn [stdout]
-     {:sha256 (. stdout 1)})
-
-   ;; Test
-   :fetchTest
-   (fn [stdout]
-     {:rev (. stdout 1)})})
+     {:sha256 (. stdout 1)})})
 
 ;;; Make all gen-prefetcher-cmd tables callable (for common error handling)
 (let [mt {:__call
           (fn [self args]
-            (when (not (has-keys args self.required-keys))
-              (vim.notify
-                (string.format
-                  "Missing keys: %s"
-                  (vim.inspect
-                    (filter
-                      #(not (vim.list_contains
-                              (vim.tbl_keys args)
-                              $))
-                      self.required-keys))))
-              (lua "return"))
+            ;;; Check for missing keys
+            (let [missing (missing-keys args self.required-keys)]
+              (when (> (length missing) 0)
+                (vim.notify
+                  (string.format
+                    "Missing keys: %s"
+                    (vim.inspect
+                      missing)))
+                (lua "return nil")))
 
+            ;;; Check for missing cmds
+            (let [missing (filter #(= (vim.fn.executable $.v) 0) self.required-cmds)]
+              (when (> (length missing) 0)
+                (vim.notify
+                  (string.format
+                    "Missing commands: %s"
+                    (vim.inspect
+                      missing)))
+                (lua "return nil")))
+
+            ;;; Finally, safely call prefetch function
             (self.prefetch args))}]
   (each [_ prefetcher (pairs gen-prefetcher-cmd)]
     (setmetatable prefetcher mt)))

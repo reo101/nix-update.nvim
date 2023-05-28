@@ -2,12 +2,20 @@
         : get-prefetcher-extractor}
        (require :nix-update.prefetchers))
 
-(local {: map
-        : imap
+(local {: imap
         : flatten
         : find-child
         : call-command}
        (require :nix-update.util))
+
+(macro -m> [val ...]
+  "Thread a value through a list of method calls"
+  (assert-compile
+    val
+    "There should be an input value to the pipeline")
+  (accumulate [res val
+               _   [f & args] (ipairs [...])]
+    `(: ,res ,f ,(unpack args))))
 
 ;;; Define TS query for getting the fetches
 (local fetches-query-string
@@ -23,14 +31,10 @@
              attr: (identifier) @_fname
              .))]
     argument:
-      (attrset_expression
-        (binding_set) @_fargs)
-      ;; FIXME: make argument resolution work for a rec_attrset_expression
-      ;;
-      ;; [(attrset_expression
-      ;;    (binding_set) @_fargs)
-      ;;  (rec_attrset_expression
-      ;;    (binding_set) @_fargs)]
+      [(attrset_expression
+         (binding_set) @_fargs)
+       (rec_attrset_expression
+         (binding_set) @_fargs)]
   ) @_fwhole
   (#any-of? @_fname %s)
 )
@@ -51,9 +55,14 @@
                         fetches-names)))
 
 ;;; Get AST root
-(fn get-root [?bufnr]
+(fn get-root [opts]
+  ;;; Extract opts
+  (local opts (or opts {}))
+  (local {: bufnr}
+         opts)
+
   ;;; Get current buffer
-  (local bufnr (or ?bufnr
+  (local bufnr (or bufnr
                    (vim.api.nvim_get_current_buf)))
 
   ;;; Early return if not in a Nix file
@@ -69,9 +78,15 @@
 ;;; Find all local bindings
 ;;; NOTE: `{: ?interp : name}` -> name of referenced variable
 ;;;       `{: ?interp : node : value}` -> node + value of found definition
-(fn find-all-local-bindings [bounder ?bufnr]
+;;;       `{: notfound}` -> not found
+(fn find-all-local-bindings [bounder opts]
+  ;;; Extract opts
+  (local opts (or opts {}))
+  (local {: bufnr}
+         opts)
+
   ;;; Get current buffer
-  (local bufnr (or ?bufnr
+  (local bufnr (or bufnr
                    (vim.api.nvim_get_current_buf)))
 
   ;;; Early return if not in a Nix file
@@ -88,7 +103,7 @@
       "binding"
       (let [attr        (find-child
                           #(= ($1:type) "attrpath")
-                          (binding:iter_children))
+                          binding)
             attr-name   (when attr
                           (vim.treesitter.get_node_text
                             attr
@@ -96,7 +111,7 @@
             string-expr (let [string-expression
                                (find-child
                                   #(= ($1:type) "string_expression")
-                                  (binding:iter_children))]
+                                  binding)]
                           (when string-expression
                             (icollect [node _ (string-expression:iter_children)]
                               (match (node:type)
@@ -106,7 +121,7 @@
                                        (find-child
                                          #(and (= ($1:type) "variable_expression")
                                                (= $2 "expression"))
-                                         (node:iter_children))]
+                                         node)]
                                   (when expression
                                     ;;; Mark for search up
                                     {:?interp node
@@ -122,7 +137,7 @@
             var-expr   (let [variable-expression
                               (find-child
                                 #(= ($1:type) "variable_expression")
-                                (binding:iter_children))]
+                                binding)]
                          (when variable-expression
                            ;;; Mark for search up
                            [{:name (vim.treesitter.get_node_text
@@ -136,7 +151,7 @@
       (let [attrs (find-child
                     #(and (= ($1:type) "inherited_attrs")
                           (= $2 "attrs"))
-                    (binding:iter_children))]
+                    binding)]
         (each [node node-name (attrs:iter_children)]
           (when (and (= (node:type) "identifier")
                      (= node-name "attr"))
@@ -152,10 +167,38 @@
 
 ;;; Try finding bounded value
 ;;; TODO: optimize to work for many identifiers
-(fn try-get-binding [bounder identifier ?bufnr]
+(fn try-get-binding [bounder identifier opts]
+  ;;; Extract opts
+  (local opts (or opts {}))
+  (local {: bufnr
+          : depth
+          : depth-limit}
+         opts)
+
   ;;; Get current buffer
-  (local bufnr (or ?bufnr
+  (local bufnr (or bufnr
                    (vim.api.nvim_get_current_buf)))
+
+  ;;; Set depth and early return if too deep
+  (local depth (or depth 0))
+  (local depth-limit (or depth-limit 16))
+  (when (> depth depth-limit)
+    (vim.notify
+      (string.format
+        "Hit the depth-limit of %s!"
+        depth-limit))
+    (lua "return nil"))
+
+  ;;; NOTE: `false` <- `attrset_expression`
+  ;;;       `true`  <- `let_expression` / `rec_attrset_expression`
+  ;;;
+  ;;; NOTE: we would want to recursing on the same level (bounder)
+  ;;;       if we are on `let_expression` and `rec_attrset_expression`
+  ;;;       because they are are recursive in nature
+  (local recurse? (not= (-m> bounder
+                             [:parent]
+                             [:type])
+                        "attrset_expression"))
 
   ;;; Early return if bounder is nil
   (when (not bounder)
@@ -167,69 +210,117 @@
     (vim.notify_once "This is meant to be used with Nix files")
     (lua "return nil"))
 
+  (fn find-parent-bounder []
+    ;;; Find closest parent with a binding_set
+    ;;; (immediate parent would short-circuit the loop)
+    (var parent-bounder (-m> bounder
+                             [:parent]
+                             [:parent]))
+    ;; (var parent-bounder (: (: bounder :parent) :parent))
+    (while (and parent-bounder
+                (not= (parent-bounder:type) "rec_attrset_expression")
+                (not= (parent-bounder:type) "let_expression"))
+      (set parent-bounder (parent-bounder:parent)))
+
+    ;;; If found, step down into its binding_set
+    (when parent-bounder
+      (set parent-bounder
+           (find-child
+             #(= ($:type) "binding_set")
+             parent-bounder)))
+
+    parent-bounder)
+
   ;;; Find all local bindings
-  (local bindings (find-all-local-bindings bounder bufnr))
+  (local bindings (find-all-local-bindings bounder {: bufnr}))
 
   ;;; Evaluate all found local bindings
   (let [binding (. bindings identifier)]
-    ;;; Find closest parent with a binding_set
-    ;;; (immediate parent would short-circuit the loop)
-    (var target (: (: bounder :parent) :parent))
-    (while (and target
-                (not= (target:type) "rec_attrset_expression")
-                (not= (target:type) "let_expression"))
-      (set target (target:parent)))
-
-    ;;; If we find such a parent
-    (when target
-      ;;; Step down into its binding_set
-      (set target
-           (find-child
-             #(= ($:type) "binding_set")
-             (target:iter_children))))
-
     (local
       final-binding
       (if binding
          ;;; Table - Final value/Variable reference
          (let [find-up
-                (fn [fragment]
+                (fn [{:v fragment}]
                   (match fragment
                     ;;; Final value - Return
                     {: ?interp : node : value}
                     {: ?interp : node : value}
-                    ;;; Variable reference - Recurse up for name
+                    ;;; Variable reference - Recurse for name
                     {: ?interp : name}
-                    (let [resolved (flatten (try-get-binding target name bufnr))]
-                      ;;; When no upper-level interpolation - keep old one
-                      (each [i fragment (ipairs resolved)]
-                        (when (not fragment.?interp)
-                          (tset fragment :?interp ?interp)))
-                      resolved)
-                    ;;; Nil - Error (unhandled)
-                    nil
-                    nil))
-               ;; BUG: might have `nil`s inside
+                    (let [parent-bounder (find-parent-bounder)
+                          ;;; NOTE: `recurse?` matters here
+                          next-bounder (if recurse?
+                                           bounder
+                                           parent-bounder)]
+                      (if next-bounder
+                        ;; Search upwards*
+                        (let [resolved (try-get-binding
+                                         next-bounder
+                                         name
+                                         {: bufnr
+                                          :depth (+ depth 1)
+                                          : depth-limit})]
+                          ;;; When no upper-level interpolation - keep old one
+                          (each [_ fragment (ipairs resolved)]
+                            (when (not fragment.?interp)
+                              (tset fragment :?interp ?interp)))
+                          resolved)
+                        ;; Nowhere to search
+                        {:notfound name}))
+                    ;;; Not found - leave be
+                    {: notfound}
+                    {: notfound}))
+               ;; NOTE: might have `notfound`s inside
                full-fragments
                 (imap find-up binding)]
            full-fragments)
-         ;;; Nil - Recurse up for same
-        (try-get-binding target binding bufnr)))
+         ;;; Not found on this level - Recurse up for same
+         ;;; NOTE: unlike with variable reference
+         ;;;       here we just recurse upwards
+         (let [parent-bounder (find-parent-bounder)]
+           (if parent-bounder
+             ;; Search upwards
+             (try-get-binding
+               parent-bounder
+               identifier
+               {: bufnr
+                :depth (+ depth 1)
+                : depth-limit})
+             ;; Nowhere to seach
+             {:notfound identifier}))))
 
     ;; Return the (flattened) `fragment`s
     (flatten final-binding)))
 
 ;;; Concatinate all `fragment`s from a binding
 (fn binding-to-value [binding]
-  (table.concat
-    (imap
-      #$.value
-      binding)))
+  (var result "")
+  (var notfounds [])
+
+  (each [_ fragment (ipairs binding)]
+    (do
+      (match fragment
+        ;;; Resolved
+        {: value}
+        (set result (.. result value))
+        ;;; Unresolved
+        {: notfound}
+        (table.insert notfounds notfound))))
+
+  (if (> (length notfounds) 0)
+      {:bad notfounds}
+      {:good result}))
 
 ;;; Get used fetches in bufnr
-(fn find-used-fetches [?bufnr]
+(fn find-used-fetches [opts]
+  ;;; Extract opts
+  (local opts (or opts {}))
+  (local {: bufnr}
+         opts)
+
   ;;; Get current buffer
-  (local bufnr (or ?bufnr
+  (local bufnr (or bufnr
                    (vim.api.nvim_get_current_buf)))
 
   ;;; Early return if not in a Nix file
@@ -239,7 +330,7 @@
     (lua "return nil"))
 
   ;;; Get the AST root
-  (local root (get-root bufnr))
+  (local root (get-root {: bufnr}))
 
   ;;; Find all used fetches and store them
   (local found-fetches
@@ -259,8 +350,8 @@
                    ;;; ... its arguments ...
                    "_fargs"
                    (collect [name _
-                             (pairs (find-all-local-bindings node bufnr))]
-                     (let [value (try-get-binding node name bufnr)]
+                             (pairs (find-all-local-bindings node {: bufnr}))]
+                     (let [value (try-get-binding node name {: bufnr})]
                        (values name value)))
                    ;;; ... and the whole node
                    ;;; (for checking whether the cursor is inside of it)
@@ -270,13 +361,18 @@
   ;;; Return the accumulated fetches
   found-fetches)
 
-(fn get-fetch-at-cursor [?bufnr]
+(fn get-fetch-at-cursor [opts]
+  ;;; Extract opts
+  (local opts (or opts {}))
+  (local {: bufnr}
+         opts)
+
   ;;; Get selected buffer (custom or current)
-  (local bufnr (or ?bufnr
+  (local bufnr (or bufnr
                    (vim.api.nvim_get_current_buf)))
 
   ;;; Get found fetches
-  (local found-fetches (find-used-fetches bufnr))
+  (local found-fetches (find-used-fetches {: bufnr}))
 
   ;;; Get cursor position
   (local [_ cursor-row cursor-col _ _] (vim.fn.getcursorcharpos))
@@ -289,16 +385,21 @@
             cursor-col)
       (lua "return fetch"))))
 
-(fn prefetch-fetch-at-cursor [?bufnr]
+(fn prefetch-fetch-at-cursor [opts]
+  ;;; Extract opts
+  (local opts (or opts {}))
+  (local {: bufnr}
+         opts)
+
   ;;; Get selected buffer (custom or current)
-  (local bufnr (or ?bufnr
+  (local bufnr (or bufnr
                    (vim.api.nvim_get_current_buf)))
 
   ;;; Get fetch at cursor
-  (local fetch-at-cursor (get-fetch-at-cursor bufnr))
+  (local fetch-at-cursor (get-fetch-at-cursor {: bufnr}))
 
   ;;; Early return if not found
-  (when (= fetch-at-cursor nil)
+  (when (not fetch-at-cursor)
     (vim.notify "No fetch found at cursor")
     (lua "return"))
 
@@ -307,21 +408,52 @@
          (?. gen-prefetcher-cmd fetch-at-cursor._fname))
 
   ;;; Early return if not found
-  (when (= prefetcher nil)
+  (when (not prefetcher)
     (vim.notify
       (string.format
         "No prefetcher '%s' found"
         fetch-at-cursor._fname))
-    (lua "return"))
+    (lua "return nil"))
+
+  ;;; Resolve and validate arguments' values
+  (local argument-values
+         (do
+           (var argument-values {})
+           (var notfounds-pairs [])
+
+           ;;; Go through all fargs
+           (each [farg-name farg-binding (pairs fetch-at-cursor._fargs)]
+             (do
+               (match (binding-to-value farg-binding)
+                 ;;; It the value is resolved - set
+                 {:good result}
+                 (tset argument-values farg-name result)
+                 ;;; If the value is not resolved - remember which and why
+                 {:bad notfounds}
+                 (table.insert notfounds-pairs {: farg-name
+                                                : notfounds}))))
+
+           ;;; For each unresolved value - report which and why
+           (each [_ {: farg-name : notfounds} (ipairs notfounds-pairs)]
+             (vim.notify
+               (string.format
+                 "Identifiers %s not found while evaluating %s!"
+                 (vim.inspect notfounds)
+                 farg-name)))
+
+           ;;; If any values were unresolved - abort
+           (when (> (length notfounds-pairs) 0)
+             (lua "return nil"))
+
+           ;;; Return the accumulated values
+           argument-values))
 
   ;;; Get the commands components
   (local prefetcher-cmd
-         (prefetcher
-           (map binding-to-value
-                fetch-at-cursor._fargs)))
+         (prefetcher argument-values))
 
   ;;; Early return if invalid
-  (when (= prefetcher-cmd nil)
+  (when (not prefetcher-cmd)
     (vim.notify
       (string.format
         "Could not generate command for the prefetcher '%s'"
@@ -333,7 +465,7 @@
          (?. get-prefetcher-extractor fetch-at-cursor._fname))
 
   ;;; Early return if not found
-  (when (= prefetcher-extractor nil)
+  (when (not prefetcher-extractor)
     (vim.notify
       (string.format
         "No data extractor for the prefetcher '%s' found"
