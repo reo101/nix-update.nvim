@@ -58,6 +58,36 @@
     (table.insert xs y))
   xs)
 
+(fn coords [opts]
+  ;;; Extract opts
+  (local opts (or opts {}))
+  (local {: bufnr
+          : node}
+         opts)
+
+  ;;; Early return if no bufnr
+  (when (not bufnr)
+    (vim.notify
+      (string.format
+        "No bufnr given for getting coords"
+        bufnr))
+    (lua "return"))
+
+  ;;; Early return if no node
+  (when (not node)
+    (vim.notify
+      (string.format
+        "No node given for getting coords"
+        bufnr))
+    (lua "return"))
+
+  (let [(start-row start-col end-row end-col)
+        (vim.treesitter.get_node_range node bufnr)]
+    {: start-row
+     : start-col
+     : end-row
+     : end-col}))
+
 ;;; Define helper to run async commands using libuv
 (fn call-command [{: cmd : args} callback]
   ;; Define pipes
@@ -77,7 +107,7 @@
 
   ;; Define on-exit handler
   (local on-exit (fn [_status]
-                   (each [_ pipe (pairs [stdout stderr])]
+                   (each [_ pipe (ipairs [stdout stderr])]
                      (uv.read_stop pipe)
                      (uv.close pipe))
                    (uv.close handle)
@@ -111,4 +141,5 @@
  : find-children
  : missing-keys
  : concat-two
+ : coords
  : call-command}

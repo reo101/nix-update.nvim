@@ -58,8 +58,38 @@
  table.insert(xs, y) end
  return xs end
 
+ local function coords(opts)
 
- local function call_command(_17_, callback) local _arg_18_ = _17_ local cmd = _arg_18_["cmd"] local args = _arg_18_["args"]
+ local opts0 = (opts or {})
+ local _local_17_ = opts0 local bufnr = _local_17_["bufnr"]
+ local node = _local_17_["node"]
+
+
+
+ if not bufnr then
+ vim.notify(string.format("No bufnr given for getting coords", bufnr))
+
+
+
+ return else end
+
+
+ if not node then
+ vim.notify(string.format("No node given for getting coords", bufnr))
+
+
+
+ return else end
+
+
+ local start_row, start_col, end_row, end_col = vim.treesitter.get_node_range(node, bufnr)
+ return {["start-row"] = start_row, ["start-col"] = start_col, ["end-row"] = end_row, ["end-col"] = end_col} end
+
+
+
+
+
+ local function call_command(_20_, callback) local _arg_21_ = _20_ local cmd = _arg_21_["cmd"] local args = _arg_21_["args"]
 
  local stdout = uv.new_pipe()
  local stderr = uv.new_pipe()
@@ -76,21 +106,21 @@
 
 
 
- local on_exit local function _19_(_status)
- for _, pipe in pairs({stdout, stderr}) do
+ local on_exit local function _22_(_status)
+ for _, pipe in ipairs({stdout, stderr}) do
  uv.read_stop(pipe)
  uv.close(pipe) end
  uv.close(handle)
- local function _20_() return callback(result) end return vim.schedule(_20_) end on_exit = _19_
+ local function _23_() return callback(result) end return vim.schedule(_23_) end on_exit = _22_
 
 
- local on_read local function _21_(pipe)
- local function _22_(_status, data)
+ local on_read local function _24_(pipe)
+ local function _25_(_status, data)
  if data then
  local vals = vim.split(data, "\n")
  for _, val in ipairs(vals) do
  if (val ~= "") then
- table.insert(result[pipe], val) else end end return nil else return nil end end return _22_ end on_read = _21_
+ table.insert(result[pipe], val) else end end return nil else return nil end end return _25_ end on_read = _24_
 
 
  handle = uv.spawn(cmd, options, on_exit)
@@ -101,4 +131,4 @@
 
  return nil end
 
- return {any = any, all = all, map = map, imap = imap, filter = filter, flatten = flatten, ["find-child"] = find_child, ["find-children"] = find_children, ["missing-keys"] = missing_keys, ["concat-two"] = concat_two, ["call-command"] = call_command}
+ return {any = any, all = all, map = map, imap = imap, filter = filter, flatten = flatten, ["find-child"] = find_child, ["find-children"] = find_children, ["missing-keys"] = missing_keys, ["concat-two"] = concat_two, coords = coords, ["call-command"] = call_command}

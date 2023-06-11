@@ -2,9 +2,13 @@
         : get-prefetcher-extractor}
        (require :nix-update.prefetchers))
 
+(local {: cache}
+       (require :nix-update.cache))
+
 (local {: imap
         : flatten
         : find-child
+        : coords
         : call-command}
        (require :nix-update.util))
 
@@ -79,15 +83,21 @@
 ;;; NOTE: `{: ?interp : name}` -> name of referenced variable
 ;;;       `{: ?interp : node : value}` -> node + value of found definition
 ;;;       `{: notfound}` -> not found
-(fn find-all-local-bindings [bounder opts]
+(fn find-all-local-bindings [opts]
   ;;; Extract opts
   (local opts (or opts {}))
-  (local {: bufnr}
+  (local {: bufnr
+          : bounder}
          opts)
 
   ;;; Get current buffer
   (local bufnr (or bufnr
                    (vim.api.nvim_get_current_buf)))
+
+  ;;; Early return if there is no bounder
+  (when (not bounder)
+    (vim.notify "No bounder")
+    (lua "return"))
 
   ;;; Early return if not in a Nix file
   (when (not= (. vim :bo bufnr :filetype)
@@ -167,10 +177,12 @@
 
 ;;; Try finding bounded value
 ;;; TODO: optimize to work for many identifiers
-(fn try-get-binding [bounder identifier opts]
+(fn try-get-binding-value [opts]
   ;;; Extract opts
   (local opts (or opts {}))
   (local {: bufnr
+          : bounder
+          : identifier
           : depth
           : depth-limit}
          opts)
@@ -178,6 +190,16 @@
   ;;; Get current buffer
   (local bufnr (or bufnr
                    (vim.api.nvim_get_current_buf)))
+
+  ;;; Early return if there is no bounder
+  (when (not bounder)
+    (vim.notify "No bounder")
+    (lua "return"))
+
+  ;;; Early return if there is no identifier
+  (when (not identifier)
+    (vim.notify "No identifier")
+    (lua "return"))
 
   ;;; Set depth and early return if too deep
   (local depth (or depth 0))
@@ -232,7 +254,7 @@
     parent-bounder)
 
   ;;; Find all local bindings
-  (local bindings (find-all-local-bindings bounder {: bufnr}))
+  (local bindings (find-all-local-bindings {: bufnr : bounder}))
 
   ;;; Evaluate all found local bindings
   (let [binding (. bindings identifier)]
@@ -255,10 +277,10 @@
                                            parent-bounder)]
                       (if next-bounder
                         ;; Search upwards*
-                        (let [resolved (try-get-binding
-                                         next-bounder
-                                         name
+                        (let [resolved (try-get-binding-value
                                          {: bufnr
+                                          :bounder next-bounder
+                                          :identifier name
                                           :depth (+ depth 1)
                                           : depth-limit})]
                           ;;; When no upper-level interpolation - keep old one
@@ -281,10 +303,10 @@
          (let [parent-bounder (find-parent-bounder)]
            (if parent-bounder
              ;; Search upwards
-             (try-get-binding
-               parent-bounder
-               identifier
+             (try-get-binding-value
                {: bufnr
+                :bounder parent-bounder
+                : identifier
                 :depth (+ depth 1)
                 : depth-limit})
              ;; Nowhere to seach
@@ -293,8 +315,65 @@
     ;; Return the (flattened) `fragment`s
     (flatten final-binding)))
 
+(fn try-get-binding-bounder [opts]
+  ;;; Extract opts
+  (local opts (or opts {}))
+  (local {: bufnr
+          : node
+          : name}
+         opts)
+
+  ;;; Early return if there is no bufnr
+  (when (not bufnr)
+    (vim.notify "No bufnr")
+    (lua "return"))
+
+  ;;; Early return if there is no node
+  (when (not node)
+    (vim.notify "No node")
+    (lua "return"))
+
+  ;;; Early return if there is no name
+  (when (not name)
+    (vim.notify "No name")
+    (lua "return"))
+
+  ;;; Find binding(s)
+  (local
+    bindings
+    (icollect [binding _ (node:iter_children)]
+      (match (binding:type)
+        ;;; Classic binding
+        "binding"
+        (let [attr      (find-child
+                          #(= ($1:type) "attrpath")
+                          binding)
+              attr-name (when attr
+                          (vim.treesitter.get_node_text
+                            attr
+                            bufnr))]
+          (when (= attr-name name)
+            binding))
+        ;;; (Plain) inherit bindings
+        "inherit"
+        (let [attrs (find-child
+                      #(and (= ($1:type) "inherited_attrs")
+                            (= $2 "attrs"))
+                      binding)
+              attr  (find-child
+                      #(and (= ($1:type) "identifier")
+                            (= $2 "attr")
+                            (= (vim.treesitter.get_node_text
+                                 bufnr
+                                 $1)
+                               name))
+                      attrs)]
+          attr))))
+
+  (. bindings 1))
+
 ;;; Concatinate all `fragment`s from a binding
-(fn binding-to-value [binding]
+(fn fragments-to-value [binding]
   (var result "")
   (var notfounds [])
 
@@ -350,9 +429,16 @@
                    ;;; ... its arguments ...
                    "_fargs"
                    (collect [name _
-                             (pairs (find-all-local-bindings node {: bufnr}))]
-                     (let [value (try-get-binding node name {: bufnr})]
-                       (values name value)))
+                             (pairs (find-all-local-bindings {: bufnr
+                                                              :bounder node}))]
+                     (let [binding (try-get-binding-bounder {: bufnr
+                                                             : node
+                                                             : name})
+                           fragments (try-get-binding-value {: bufnr
+                                                             :bounder node
+                                                             :identifier name})]
+                       (values name {: binding
+                                     : fragments})))
                    ;;; ... and the whole node
                    ;;; (for checking whether the cursor is inside of it)
                    "_fwhole"
@@ -385,34 +471,141 @@
             cursor-col)
       (lua "return fetch"))))
 
-(fn prefetch-fetch-at-cursor [opts]
+;;; Update the values of the new prefetched fields
+(fn sed [opts]
   ;;; Extract opts
   (local opts (or opts {}))
-  (local {: bufnr}
+  (local {: bufnr
+          : fetch
+          : new-data}
+         opts)
+
+  (each [key new-value (pairs new-data)]
+    (local existing (?. fetch :_fargs key))
+    (if existing
+        ;;; If already exists - update
+        (do
+          (var i-fragment  1)
+          (var i-new-value 1)
+          (var short-circuit? false)
+          (while (and (not short-circuit?)
+                     (<= i-new-value (length new-value)))
+            (let [fragment (. existing i-fragment)
+                  {:node    fragment-node
+                   :value   fragment-value
+                   :?interp fragment-?interp} fragment]
+              (if
+                ;;; TODO: handle unexpected ends
+                false
+                nil
+                ;;; If fragment is same - leave alone
+                (= (string.sub new-value
+                               i-new-value
+                               (+ i-new-value
+                                  (length fragment-value)
+                                  -1))
+                   fragment-value)
+                (do
+                  (set i-fragment  (+ i-fragment  1))
+                  (set i-new-value (+ i-new-value (length fragment-value))))
+                ;;; If on last fragment - update it
+                (= i-fragment (length existing))
+                (do
+                  (local {: start-row : start-col : end-row : end-col}
+                         (coords {: bufnr :node fragment-node}))
+                  (vim.api.nvim_buf_set_text
+                    bufnr
+                    start-row
+                    start-col
+                    end-row
+                    end-col
+                    [(string.sub new-value i-new-value)])
+                  (set short-circuit? true))
+                ;;; If neither - nuke
+                (do
+                  ;;; TODO: collect all discarded interpolated fragments
+                  ;;;       and report to the user that they are invalidated
+                  (local last-fragment
+                         (. existing (length existing)))
+                  (local {:?interp last-fragment-?interp
+                          :node    last-fragment-node}
+                         last-fragment)
+                  (local {: start-row : start-col} (coords {: bufnr
+                                                            :node (or fragment-?interp
+                                                                      fragment-node)}))
+                  (local {: end-row : end-col} (coords {: bufnr
+                                                        :node (or last-fragment-?interp
+                                                                last-fragment-node)}))
+                  (vim.api.nvim_buf_set_text
+                    bufnr
+                    start-row
+                    start-col
+                    end-row
+                    end-col
+                    [(string.sub new-value i-new-value)])
+                  (set short-circuit? true))))))
+        ;;; If not - insert it at the end
+        (let [{: end-row} (coords {: bufnr :node fetch._fwhole})]
+          (vim.api.nvim_buf_set_lines
+            bufnr
+            end-row
+            end-row
+            true
+            [(string.format
+               "%s = \"%s\";"
+               key
+               new-value)])
+          ;;; TODO:
+          ;;; nvim_buf_set_mark
+          ;;; nvim_win_set_cursor
+          ;;; ==
+          ;;; nvim_buf_get_mark
+          ;;; nvim_win_set_cursor
+          (vim.cmd
+            (string.format
+              "normal ma%sggj==`a"
+              end-row)))))
+
+  (vim.notify "Prefetch complete!"))
+
+;;; Prefetch given fetch
+;;; store its results in the global state table
+(fn prefetch-fetch [opts]
+  ;;; Extract opts
+  (local opts (or opts {}))
+  (local {: bufnr
+          : fetch}
+          ;; : callback}
          opts)
 
   ;;; Get selected buffer (custom or current)
   (local bufnr (or bufnr
                    (vim.api.nvim_get_current_buf)))
 
-  ;;; Get fetch at cursor
-  (local fetch-at-cursor (get-fetch-at-cursor {: bufnr}))
+  ;;; Get selected fetch (cursor or at cursor)
+  (local fetch (or fetch
+                   (get-fetch-at-cursor {: bufnr})))
 
-  ;;; Early return if not found
-  (when (not fetch-at-cursor)
-    (vim.notify "No fetch found at cursor")
+  ;; ;;; Early return if there is no callback
+  ;; (when (not= (type callback) :function)
+  ;;   (vim.notify "Callback is not a function")
+  ;;   (lua "return"))
+
+  ;;; Early return if there is no fetch
+  (when (not fetch)
+    (vim.notify "No fetch (neither given nor one at cursor)")
     (lua "return"))
 
   ;;; Get correct prefetcher cmd generator
   (local prefetcher
-         (?. gen-prefetcher-cmd fetch-at-cursor._fname))
+         (?. gen-prefetcher-cmd fetch._fname))
 
   ;;; Early return if not found
   (when (not prefetcher)
     (vim.notify
       (string.format
         "No prefetcher '%s' found"
-        fetch-at-cursor._fname))
+        fetch._fname))
     (lua "return nil"))
 
   ;;; Resolve and validate arguments' values
@@ -422,9 +615,9 @@
            (var notfounds-pairs [])
 
            ;;; Go through all fargs
-           (each [farg-name farg-binding (pairs fetch-at-cursor._fargs)]
+           (each [farg-name farg-binding (pairs fetch._fargs)]
              (do
-               (match (binding-to-value farg-binding)
+               (match (fragments-to-value farg-binding.fragments)
                  ;;; It the value is resolved - set
                  {:good result}
                  (tset argument-values farg-name result)
@@ -457,123 +650,51 @@
     (vim.notify
       (string.format
         "Could not generate command for the prefetcher '%s'"
-        fetch-at-cursor._fname))
+        fetch._fname))
     (lua "return"))
 
   ;;; Get correct prefetcher result extractor
   (local prefetcher-extractor
-         (?. get-prefetcher-extractor fetch-at-cursor._fname))
+         (?. get-prefetcher-extractor fetch._fname))
 
   ;;; Early return if not found
   (when (not prefetcher-extractor)
     (vim.notify
       (string.format
         "No data extractor for the prefetcher '%s' found"
-        fetch-at-cursor._fname))
+        fetch._fname))
     (lua "return"))
 
-  ;;; Update the values of the new prefetched fields
-  (fn sed [{: stdout : stderr}]
-    (when (= (length stdout) 0)
-      (vim.print stderr)
-      (lua "return"))
-
-    (fn coords [node]
-      (let [(start-row start-col end-row end-col)
-            (vim.treesitter.get_node_range node bufnr)]
-        {: start-row
-         : start-col
-         : end-row
-         : end-col}))
-
-    (each [key new-value (pairs (prefetcher-extractor stdout))]
-      (local existing (?. fetch-at-cursor :_fargs key))
-      (if existing
-          ;;; If already exists - update
-          (do
-            (var i-fragment  1)
-            (var i-new-value 1)
-            (var short-circuit? false)
-            (while (and (not short-circuit?)
-                       (<= i-new-value (length new-value)))
-              (let [fragment                   (. existing i-fragment)
-                    {:?interp fragment-?interp
-                     :node    fragment-node
-                     :value   fragment-value}  fragment]
-                (if
-                  ;;; TODO: handle unexpected ends
-                  false
-                  nil
-                  ;;; If fragment is same - leave alone
-                  (= (string.sub new-value
-                                 i-new-value
-                                 (+ i-new-value
-                                    (length fragment-value)
-                                    -1))
-                     fragment-value)
-                  (do
-                    (set i-fragment  (+ i-fragment  1))
-                    (set i-new-value (+ i-new-value (length fragment-value))))
-                  ;;; If on last fragment - update it
-                  (= i-fragment (length existing))
-                  (do
-                    (local {: start-row : start-col : end-row : end-col}
-                           (coords fragment-node))
-                    (vim.api.nvim_buf_set_text
-                      bufnr
-                      start-row
-                      start-col
-                      end-row
-                      end-col
-                      [(string.sub new-value i-new-value)])
-                    (set short-circuit? true))
-                  ;;; If neither - nuke
-                  (do
-                    ;;; TODO: collect all discarded interpolated fragments
-                    ;;;       and report to the user that they are invalidated
-                    (local last-fragment
-                           (. existing (length existing)))
-                    (local {:?interp last-fragment-?interp
-                            :node    last-fragment-node}
-                           last-fragment)
-                    (local {: start-row : start-col} (coords (or fragment-?interp
-                                                                 fragment-node)))
-                    (local {: end-row : end-col} (coords (or last-fragment-?interp
-                                                             last-fragment-node)))
-                    (vim.api.nvim_buf_set_text
-                      bufnr
-                      start-row
-                      start-col
-                      end-row
-                      end-col
-                      [(string.sub new-value i-new-value)])
-                    (set short-circuit? true))))))
-          ;;; If not - insert it at the end
-          (let [{: end-row} (coords fetch-at-cursor._fwhole)]
-            (vim.api.nvim_buf_set_lines
-              bufnr
-              end-row
-              end-row
-              true
-              [(string.format
-                 "%s = \"%s\";"
-                 key
-                 new-value)])
-            ;;; TODO:
-            ;;; nvim_buf_set_mark
-            ;;; nvim_win_set_cursor
-            ;;; ==
-            ;;; nvim_buf_get_mark
-            ;;; nvim_win_set_cursor
-            (vim.cmd
-              (string.format
-                "normal ma%sggj==`a"
-                end-row)))))
-
-    (vim.notify "Prefetch complete!"))
+  ;; (when (not (. cache bufnr))
+  ;;   (tset cache bufnr {}))
 
   ;;; Call the command (will see results through `sed`)
-  (call-command prefetcher-cmd sed)
+  (call-command
+    prefetcher-cmd
+    (fn [{: stdout : stderr}]
+      (when (= (length stdout) 0)
+        (tset
+          cache
+          fetch._fwhole
+          {: bufnr
+           : fetch
+           :err (string.format
+                  "Oopsie: %s"
+                  (vim.inspect
+                    stderr))})
+        (lua "return"))
+      ;;; Cache the prefetched data
+      (tset
+        cache
+        fetch._fwhole
+        {: bufnr
+         : fetch
+         :data (prefetcher-extractor stdout)})))
+  ;; (call-command prefetcher-cmd #(sed {: bufnr
+  ;;                                     : fetch
+  ;;                                     : prefetcher-extractor
+  ;;                                     :stdin  $.stdin
+  ;;                                     :stdout $.stdin}))
 
   ;;; Notify user that we are now waiting
   (vim.notify
@@ -585,8 +706,8 @@
  : fetches-query
  : get-root
  : find-all-local-bindings
- : try-get-binding
- : binding-to-value
+ : try-get-binding-value
+ : fragments-to-value
  : find-used-fetches
  : get-fetch-at-cursor
- : prefetch-fetch-at-cursor}
+ : prefetch-fetch}
