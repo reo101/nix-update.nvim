@@ -24,18 +24,17 @@
 
 
 
-
- if vim.tbl_isempty(opts0) then
- return cache else end
-
-
  if handler then
  on_index = handler else end
 
 
  if clear then
- cache = {} return nil else return nil end end proxy_mt = {__index = _2_, __newindex = _3_, __call = _4_}
+ cache = {} else end
 
+
+
+ if vim.tbl_isempty(opts0) then
+ return cache else return nil end end proxy_mt = {__index = _2_, __newindex = _3_, __call = _4_}
 
  setmetatable(proxy, proxy_mt)
 

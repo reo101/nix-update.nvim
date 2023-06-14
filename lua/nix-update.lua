@@ -2,6 +2,7 @@
  local fetches_names = _local_1_["fetches-names"]
  local fetches_query = _local_1_["fetches-query"]
  local get_root = _local_1_["get-root"]
+ local find_all_local_bindings = _local_1_["find-all-local-bindings"]
  local try_get_binding = _local_1_["try-get-binding"]
  local binding_to_value = _local_1_["binding-to-value"]
  local find_used_fetches = _local_1_["find-used-fetches"]
@@ -10,6 +11,7 @@
 
 
  local _local_2_ = require("nix-update.prefetchers") local gen_prefetcher_cmd = _local_2_["gen-prefetcher-cmd"]
+ local get_prefetcher_extractor = _local_2_["get-prefetcher-extractor"]
 
 
  local _local_3_ = require("nix-update.diagnostics") local set_diagnostic = _local_3_["set-diagnostic"]

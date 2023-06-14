@@ -364,8 +364,8 @@
                       #(and (= ($1:type) "identifier")
                             (= $2 "attr")
                             (= (vim.treesitter.get_node_text
-                                 bufnr
-                                 $1)
+                                 $1
+                                 bufnr)
                                name))
                       attrs)]
           attr))))
@@ -665,9 +665,6 @@
         fetch._fname))
     (lua "return"))
 
-  ;; (when (not (. cache bufnr))
-  ;;   (tset cache bufnr {}))
-
   ;;; Call the command (will see results through `sed`)
   (call-command
     prefetcher-cmd
@@ -690,11 +687,6 @@
         {: bufnr
          : fetch
          :data (prefetcher-extractor stdout)})))
-  ;; (call-command prefetcher-cmd #(sed {: bufnr
-  ;;                                     : fetch
-  ;;                                     : prefetcher-extractor
-  ;;                                     :stdin  $.stdin
-  ;;                                     :stdout $.stdin}))
 
   ;;; Notify user that we are now waiting
   (vim.notify

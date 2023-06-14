@@ -2,6 +2,7 @@
         : fetches-names
         : fetches-query
         : get-root
+        : find-all-local-bindings
         : try-get-binding
         : binding-to-value
         : find-used-fetches
@@ -9,7 +10,8 @@
         : prefetch-fetch}
        (require :nix-update.fetches))
 
-(local {: gen-prefetcher-cmd}
+(local {: gen-prefetcher-cmd
+        : get-prefetcher-extractor}
        (require "nix-update.prefetchers"))
 
 (local {: set-diagnostic}

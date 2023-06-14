@@ -361,7 +361,7 @@
 
 
 
- local function _54_(_241, _242) return ((_241:type() == "identifier") and (_242 == "attr") and (vim.treesitter.get_node_text(bufnr, _241) == name)) end attr = find_child(_54_, attrs)
+ local function _54_(_241, _242) return ((_241:type() == "identifier") and (_242 == "attr") and (vim.treesitter.get_node_text(_241, bufnr) == name)) end attr = find_child(_54_, attrs)
 
 
 
@@ -668,9 +668,6 @@
 
 
 
-
-
-
  local function _99_(_97_) local _arg_98_ = _97_ local stdout = _arg_98_["stdout"] local stderr = _arg_98_["stderr"]
  if (#stdout == 0) then
  cache[fetch0._fwhole] = {bufnr = bufnr0, fetch = fetch0, err = string.format("Oopsie: %s", vim.inspect(stderr))}
@@ -685,11 +682,6 @@
  return else end
 
  cache[fetch0._fwhole] = {bufnr = bufnr0, fetch = fetch0, data = prefetcher_extractor(stdout)} return nil end call_command(prefetcher_cmd, _99_)
-
-
-
-
-
 
 
 
