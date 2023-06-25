@@ -1,26 +1,13 @@
- local _local_1_ = require("nix-update.fetches") local fetches_query_string = _local_1_["fetches-query-string"]
- local fetches_names = _local_1_["fetches-names"]
- local fetches_query = _local_1_["fetches-query"]
- local get_root = _local_1_["get-root"]
- local find_all_local_bindings = _local_1_["find-all-local-bindings"]
- local try_get_binding = _local_1_["try-get-binding"]
- local binding_to_value = _local_1_["binding-to-value"]
- local find_used_fetches = _local_1_["find-used-fetches"]
- local get_fetch_at_cursor = _local_1_["get-fetch-at-cursor"]
- local prefetch_fetch = _local_1_["prefetch-fetch"]
+ local _local_1_ = require("nix-update.diagnostics") local set_diagnostic = _local_1_["set-diagnostic"]
 
 
- local _local_2_ = require("nix-update.prefetchers") local gen_prefetcher_cmd = _local_2_["gen-prefetcher-cmd"]
- local get_prefetcher_extractor = _local_2_["get-prefetcher-extractor"]
+ local _local_2_ = require("nix-update.prefetchers") local prefetcher_cmd_mt = _local_2_["prefetcher-cmd-mt"]
 
 
- local _local_3_ = require("nix-update.diagnostics") local set_diagnostic = _local_3_["set-diagnostic"]
+ local _local_3_ = require("nix-update._cache") local cache = _local_3_["cache"]
 
 
- local _local_4_ = require("nix-update.cache") local cache = _local_4_["cache"]
-
-
- local _local_5_ = require("nix-update.util") local call_command = _local_5_["call-command"]
+ local _local_4_ = require("nix-update._config") local config = _local_4_["config"]
 
 
 
@@ -28,9 +15,32 @@
 
 
 
+ local function setup(opts)
 
- local function _6_(new, _key, value)
+
+ local opts0 = (opts or {})
+ local opts1
+ do local tbl_14_auto = {} for k, v in pairs(opts0) do
+ local k_15_auto, v_16_auto = string.gsub(k, "_", "-"), v if ((k_15_auto ~= nil) and (v_16_auto ~= nil)) then tbl_14_auto[k_15_auto] = v_16_auto else end end opts1 = tbl_14_auto end
+
+ local opts2 = vim.tbl_deep_extend("keep", opts1, {["extra-prefetcher-cmds"] = {}, ["extra-prefetcher-extractors"] = {}})
+
+
+
+
+ local _local_6_ = opts2 local extra_prefetcher_cmds = _local_6_["extra-prefetcher-cmds"]
+ local extra_prefetcher_extractors = _local_6_["extra-prefetcher-extractors"]
+
+
+
+
+ local function _7_(_241) return setmetatable(_241, prefetcher_cmd_mt) end config["extra-prefetcher-cmds"] = vim.tbl_map(_7_, extra_prefetcher_cmds)
+
+ do end (config)["extra-prefetcher-extractors"] = extra_prefetcher_extractors
+
+
+ local function _8_(new, _key, value)
  if new then
- return set_diagnostic(value) else return nil end end cache({handler = _6_})
+ return set_diagnostic(value) else return nil end end return cache({handler = _8_}) end
 
- return {fetches_query_string = fetches_query_string, fetches_names = fetches_names, fetches_query = fetches_query, get_root = get_root, try_get_binding = try_get_binding, binding_to_value = binding_to_value, find_used_fetches = find_used_fetches, get_fetch_at_cursor = get_fetch_at_cursor, prefetch_fetch = prefetch_fetch, gen_prefetcher_cmd = gen_prefetcher_cmd, call_prefether = call_command, cache = cache}
+ return {setup = setup}

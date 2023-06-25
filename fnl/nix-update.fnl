@@ -1,47 +1,46 @@
-(local {: fetches-query-string
-        : fetches-names
-        : fetches-query
-        : get-root
-        : find-all-local-bindings
-        : try-get-binding
-        : binding-to-value
-        : find-used-fetches
-        : get-fetch-at-cursor
-        : prefetch-fetch}
-       (require :nix-update.fetches))
-
-(local {: gen-prefetcher-cmd
-        : get-prefetcher-extractor}
-       (require "nix-update.prefetchers"))
-
 (local {: set-diagnostic}
        (require "nix-update.diagnostics"))
 
-(local {: cache}
-       (require "nix-update.cache"))
+(local {: prefetcher-cmd-mt}
+       (require "nix-update.prefetchers"))
 
-(local {: call-command}
-       (require "nix-update.util"))
+(local {: cache}
+       (require "nix-update._cache"))
+
+(local {: config}
+       (require "nix-update._config"))
 
 ;;; TODO: `config`-urize plugin
 ;;;        add options (=> config)
 ;;;        do not reexport everything
 ;;;        sort imports/exports alphabetically
 
-;;; Set cache `on-index` handler
-(cache {:handler (fn [new _key value]
-                   (when new
-                     (set-diagnostic value)))})
+(fn setup [opts]
+  ;;; Extract opts
+  (local opts
+         (or opts {}))
+  (local opts
+         (collect [k v (pairs opts)]
+           (values (string.gsub k "_" "-") v)))
+  (local opts
+         (vim.tbl_deep_extend
+           :keep ;; Keep user-defined values
+           opts
+           {:extra-prefetcher-cmds       []
+            :extra-prefetcher-extractors []}))
+  (local {: extra-prefetcher-cmds
+          : extra-prefetcher-extractors}
+         opts)
 
-{:fetches_query_string  fetches-query-string
- :fetches_names         fetches-names
- :fetches_query         fetches-query
- :get_root              get-root
- :try_get_binding       try-get-binding
- :binding_to_value      binding-to-value
- :find_used_fetches     find-used-fetches
- :get_fetch_at_cursor   get-fetch-at-cursor
- :prefetch_fetch        prefetch-fetch
- :gen_prefetcher_cmd    gen-prefetcher-cmd
- :call_prefether        call-command
- :cache                 cache}
+  ;;; Store the config options
+  (tset config :extra-prefetcher-cmds (vim.tbl_map
+                                        #(setmetatable $ prefetcher-cmd-mt)
+                                        extra-prefetcher-cmds))
+  (tset config :extra-prefetcher-extractors extra-prefetcher-extractors)
+
+  ;;; Set cache `on-index` handler
+  (cache {:handler (fn [new _key value]
+                     (when new
+                       (set-diagnostic value)))}))
+
+{: setup}

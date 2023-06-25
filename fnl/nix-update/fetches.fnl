@@ -3,7 +3,10 @@
        (require :nix-update.prefetchers))
 
 (local {: cache}
-       (require :nix-update.cache))
+       (require :nix-update._cache))
+
+(local {: config}
+       (require :nix-update._config))
 
 (local {: imap
         : flatten
@@ -45,18 +48,24 @@
        ")
 
 ;;; Calculate fetches' names
-(local fetches-names
-       (table.concat
-         (icollect [fetch _ (pairs gen-prefetcher-cmd)]
-           (string.format "\"%s\"" fetch))
-         " "))
+(fn gen-fetches-names []
+  (..
+    (table.concat
+      (icollect [fetch _ (pairs gen-prefetcher-cmd)]
+        (string.format "\"%s\"" fetch))
+      " ")
+    " "
+    (table.concat
+      (icollect [fetch _ (pairs (?. config :extra-prefetcher-cmds))]
+        (string.format "\"%s\"" fetch))
+      " ")))
 
 ;;; Define query for matching
-(local fetches-query
+(fn gen-fetches-query []
        (vim.treesitter.parse_query
          :nix
          (string.format fetches-query-string
-                        fetches-names)))
+                        (gen-fetches-names))))
 
 ;;; Get AST root
 (fn get-root [opts]
@@ -413,36 +422,37 @@
 
   ;;; Find all used fetches and store them
   (local found-fetches
-         ;;; For each query match
-         (icollect [_pattern matcher _metadata
-                    (fetches-query:iter_matches root bufnr 0 -1)]
-           ;;; Construct a table from ...
-           (collect [id node
-                     (pairs matcher)]
-             (let [capture-id (. fetches-query :captures id)]
-               (values
-                 capture-id
-                 (match capture-id
-                   ;;; ... the fetch name ...
-                   "_fname"
-                   (vim.treesitter.get_node_text node bufnr)
-                   ;;; ... its arguments ...
-                   "_fargs"
-                   (collect [name _
-                             (pairs (find-all-local-bindings {: bufnr
-                                                              :bounder node}))]
-                     (let [binding (try-get-binding-bounder {: bufnr
-                                                             : node
-                                                             : name})
-                           fragments (try-get-binding-value {: bufnr
-                                                             :bounder node
-                                                             :identifier name})]
-                       (values name {: binding
-                                     : fragments})))
-                   ;;; ... and the whole node
-                   ;;; (for checking whether the cursor is inside of it)
-                   "_fwhole"
-                   node))))))
+         (let [fetches-query (gen-fetches-query)]
+           ;;; For each query match
+           (icollect [_pattern matcher _metadata
+                      (fetches-query:iter_matches root bufnr 0 -1)]
+             ;;; Construct a table from ...
+             (collect [id node
+                       (pairs matcher)]
+               (let [capture-id (. fetches-query :captures id)]
+                 (values
+                   capture-id
+                   (match capture-id
+                     ;;; ... the fetch name ...
+                     "_fname"
+                     (vim.treesitter.get_node_text node bufnr)
+                     ;;; ... its arguments ...
+                     "_fargs"
+                     (collect [name _
+                               (pairs (find-all-local-bindings {: bufnr
+                                                                :bounder node}))]
+                       (let [binding (try-get-binding-bounder {: bufnr
+                                                               : node
+                                                               : name})
+                             fragments (try-get-binding-value {: bufnr
+                                                               :bounder node
+                                                               :identifier name})]
+                         (values name {: binding
+                                       : fragments})))
+                     ;;; ... and the whole node
+                     ;;; (for checking whether the cursor is inside of it)
+                     "_fwhole"
+                     node)))))))
 
   ;;; Return the accumulated fetches
   found-fetches)
@@ -575,7 +585,7 @@
   (local opts (or opts {}))
   (local {: bufnr
           : fetch}
-          ;; : callback}
+          ;; : callback
          opts)
 
   ;;; Get selected buffer (custom or current)
@@ -598,7 +608,9 @@
 
   ;;; Get correct prefetcher cmd generator
   (local prefetcher
-         (?. gen-prefetcher-cmd fetch._fname))
+         ;;; NOTE: referencing user-defined cmds
+         (or (?. config :extra-prefetcher-cmds fetch._fname)
+             (?. gen-prefetcher-cmd            fetch._fname)))
 
   ;;; Early return if not found
   (when (not prefetcher)
@@ -655,7 +667,9 @@
 
   ;;; Get correct prefetcher result extractor
   (local prefetcher-extractor
-         (?. get-prefetcher-extractor fetch._fname))
+         ;;; NOTE: referencing user-defined extractors
+         (or (?. config :extra-prefetcher-extractors fetch._fname)
+             (?. get-prefetcher-extractor            fetch._fname)))
 
   ;;; Early return if not found
   (when (not prefetcher-extractor)
@@ -694,8 +708,8 @@
       "Prefetch initiated, awaiting response...")))
 
 {: fetches-query-string
- : fetches-names
- : fetches-query
+ : gen-fetches-names
+ : gen-fetches-query
  : get-root
  : find-all-local-bindings
  : try-get-binding-value

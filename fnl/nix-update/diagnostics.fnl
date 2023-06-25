@@ -3,7 +3,7 @@
        (require :nix-update.fetches))
 
 (local {: cache}
-       (require :nix-update.cache))
+       (require :nix-update._cache))
 
 (local {: coords}
        (require "nix-update.util"))

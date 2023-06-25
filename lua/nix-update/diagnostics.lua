@@ -2,7 +2,7 @@
  local prefetch_fetch = _local_1_["prefetch-fetch"]
 
 
- local _local_2_ = require("nix-update.cache") local cache = _local_2_["cache"]
+ local _local_2_ = require("nix-update._cache") local cache = _local_2_["cache"]
 
 
  local _local_3_ = require("nix-update.util") local coords = _local_3_["coords"]
