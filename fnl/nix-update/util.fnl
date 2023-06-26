@@ -47,10 +47,11 @@
       child)))
 
 (fn missing-keys [tbl keys]
-  (filter (fn [{:k key}]
-            (any (fn [{: k}]
-                   (= k key))
-                 tbl))
+  (filter (fn [{:v key}]
+            (not
+              (any (fn [{: k}]
+                     (= k key))
+                   tbl)))
           keys))
 
 (fn concat-two [xs ys]
@@ -87,6 +88,33 @@
      : start-col
      : end-row
      : end-col}))
+
+(local
+  prefetcher-cmd-mt
+  {:__call
+   (fn [self args]
+     ;;; Check for missing keys
+     (let [missing (missing-keys args self.required-keys)]
+       (when (> (length missing) 0)
+         (vim.notify
+           (string.format
+             "Missing keys: %s"
+             (vim.inspect
+               missing)))
+         (lua "return nil")))
+
+     ;;; Check for missing cmds
+     (let [missing (filter #(= (vim.fn.executable $.v) 0) self.required-cmds)]
+       (when (> (length missing) 0)
+         (vim.notify
+           (string.format
+             "Missing commands: %s"
+             (vim.inspect
+               missing)))
+         (lua "return nil")))
+
+     ;;; Finally, safely call prefetch function
+     (self.prefetch args))})
 
 ;;; Define helper to run async commands using libuv
 (fn call-command [{: cmd : args} callback]
@@ -142,4 +170,5 @@
  : missing-keys
  : concat-two
  : coords
+ : prefetcher-cmd-mt
  : call-command}

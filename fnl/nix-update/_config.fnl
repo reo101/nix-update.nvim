@@ -1,41 +1,55 @@
-(var config {})
+(local {: prefetcher-cmd-mt}
+       (require :nix-update.util))
 
-(var on-index (fn [_new _key _value]))
+(fn create-proxied []
+  (var raw {})
 
-(local proxy {})
+  (var on-index (fn [_new _key _value]))
 
-(local proxy-mt
-       {:__index
-          (fn [_self key]
-            ;;; Trigger the on-index handler (old key)
-            (on-index false key)
-            (rawget config key))
-        :__newindex
-          (fn [_self key value]
-            ;;; Trigger the on-index handler (new key)
-            (on-index true key value)
-            (rawset config key value))
-        :__call
-          (fn [_self opts]
-            ;;; Extract opts
-            (local opts (or opts {}))
-            (local {: handler
-                    : clear}
-                   opts)
+  (local proxy {})
 
-            ;;; Set the on-index handler
-            (when handler
-              (set on-index handler))
+  (local proxy-mt
+         {:__index
+            (fn [_self key]
+              ;;; Trigger the on-index handler (old key)
+              (on-index false key)
+              (rawget raw key))
+          :__newindex
+            (fn [_self key value]
+              ;;; Trigger the on-index handler (new key)
+              (on-index true key value)
+              (rawset raw key value))
+          :__call
+            (fn [_self opts]
+              ;;; Extract opts
+              (local opts (or opts {}))
+              (local {: handler
+                      : clear}
+                     opts)
 
-            ;;; Clear config
-            (when clear
-              (set config {}))
+              ;;; Set the on-index handler
+              (when handler
+                (set on-index handler))
 
-            ;;; If empty - give access to raw table
-            ;;;           (for iterating)
-            (when (vim.tbl_isempty opts)
-              config))})
+              ;;; Clear raw
+              (when clear
+                (set raw {}))
 
-(setmetatable proxy proxy-mt)
+              ;;; If empty - give access to raw table
+              ;;;           (for iterating)
+              (when (vim.tbl_isempty opts)
+                raw))})
 
-{:config proxy}
+  (setmetatable proxy proxy-mt))
+
+(local config {})
+
+(tset config :extra-prefetcher-cmds (create-proxied))
+(config.extra-prefetcher-cmds
+  {:handler (fn [new _key value]
+              (when new
+                (setmetatable value prefetcher-cmd-mt)))})
+
+(tset config :extra-prefetcher-extractors (create-proxied))
+
+{: config}

@@ -47,9 +47,10 @@
  val_19_auto = child else val_19_auto = nil end if (nil ~= val_19_auto) then i_18_auto = (i_18_auto + 1) do end (tbl_17_auto)[i_18_auto] = val_19_auto else end end return tbl_17_auto end
 
  local function missing_keys(tbl, keys)
- local function _13_(_11_) local _arg_12_ = _11_ local key = _arg_12_["k"]
+ local function _13_(_11_) local _arg_12_ = _11_ local key = _arg_12_["v"]
+
  local function _16_(_14_) local _arg_15_ = _14_ local k = _arg_15_["k"]
- return (k == key) end return any(_16_, tbl) end return filter(_13_, keys) end
+ return (k == key) end return not any(_16_, tbl) end return filter(_13_, keys) end
 
 
 
@@ -88,8 +89,35 @@
 
 
 
+ local prefetcher_cmd_mt
 
- local function call_command(_20_, callback) local _arg_21_ = _20_ local cmd = _arg_21_["cmd"] local args = _arg_21_["args"]
+
+ local function _20_(self, args)
+
+ do local missing = missing_keys(args, self["required-keys"])
+ if (#missing > 0) then
+ vim.notify(string.format("Missing keys: %s", vim.inspect(missing)))
+
+
+
+
+ return nil else end end
+
+
+ do local missing local function _22_(_241) return (vim.fn.executable(_241.v) == 0) end missing = filter(_22_, self["required-cmds"])
+ if (#missing > 0) then
+ vim.notify(string.format("Missing commands: %s", vim.inspect(missing)))
+
+
+
+
+ return nil else end end
+
+
+ return self.prefetch(args) end prefetcher_cmd_mt = {__call = _20_}
+
+
+ local function call_command(_24_, callback) local _arg_25_ = _24_ local cmd = _arg_25_["cmd"] local args = _arg_25_["args"]
 
  local stdout = uv.new_pipe()
  local stderr = uv.new_pipe()
@@ -106,21 +134,21 @@
 
 
 
- local on_exit local function _22_(_status)
+ local on_exit local function _26_(_status)
  for _, pipe in ipairs({stdout, stderr}) do
  uv.read_stop(pipe)
  uv.close(pipe) end
  uv.close(handle)
- local function _23_() return callback(result) end return vim.schedule(_23_) end on_exit = _22_
+ local function _27_() return callback(result) end return vim.schedule(_27_) end on_exit = _26_
 
 
- local on_read local function _24_(pipe)
- local function _25_(_status, data)
+ local on_read local function _28_(pipe)
+ local function _29_(_status, data)
  if data then
  local vals = vim.split(data, "\n")
  for _, val in ipairs(vals) do
  if (val ~= "") then
- table.insert(result[pipe], val) else end end return nil else return nil end end return _25_ end on_read = _24_
+ table.insert(result[pipe], val) else end end return nil else return nil end end return _29_ end on_read = _28_
 
 
  handle = uv.spawn(cmd, options, on_exit)
@@ -131,4 +159,4 @@
 
  return nil end
 
- return {any = any, all = all, map = map, imap = imap, filter = filter, flatten = flatten, ["find-child"] = find_child, ["find-children"] = find_children, ["missing-keys"] = missing_keys, ["concat-two"] = concat_two, coords = coords, ["call-command"] = call_command}
+ return {any = any, all = all, map = map, imap = imap, filter = filter, flatten = flatten, ["find-child"] = find_child, ["find-children"] = find_children, ["missing-keys"] = missing_keys, ["concat-two"] = concat_two, coords = coords, ["prefetcher-cmd-mt"] = prefetcher_cmd_mt, ["call-command"] = call_command}

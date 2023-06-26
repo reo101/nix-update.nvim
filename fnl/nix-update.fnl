@@ -1,19 +1,13 @@
 (local {: set-diagnostic}
        (require "nix-update.diagnostics"))
 
-(local {: prefetcher-cmd-mt}
-       (require "nix-update.prefetchers"))
-
 (local {: cache}
        (require "nix-update._cache"))
 
 (local {: config}
        (require "nix-update._config"))
 
-;;; TODO: `config`-urize plugin
-;;;        add options (=> config)
-;;;        do not reexport everything
-;;;        sort imports/exports alphabetically
+;;; TODO: sort imports/exports alphabetically
 
 (fn setup [opts]
   ;;; Extract opts
@@ -33,10 +27,10 @@
          opts)
 
   ;;; Store the config options
-  (tset config :extra-prefetcher-cmds (vim.tbl_map
-                                        #(setmetatable $ prefetcher-cmd-mt)
-                                        extra-prefetcher-cmds))
-  (tset config :extra-prefetcher-extractors extra-prefetcher-extractors)
+  (each [k v (pairs extra-prefetcher-cmds)]
+    (tset config.extra-prefetcher-cmds k v))
+  (each [k v (pairs extra-prefetcher-extractors)]
+    (tset config.extra-prefetcher-extractors k v))
 
   ;;; Set cache `on-index` handler
   (cache {:handler (fn [new _key value]

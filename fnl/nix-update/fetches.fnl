@@ -1,5 +1,5 @@
-(local {: gen-prefetcher-cmd
-        : get-prefetcher-extractor}
+(local {: prefetcher-cmds
+        : prefetcher-extractors}
        (require :nix-update.prefetchers))
 
 (local {: cache}
@@ -51,12 +51,12 @@
 (fn gen-fetches-names []
   (..
     (table.concat
-      (icollect [fetch _ (pairs gen-prefetcher-cmd)]
+      (icollect [fetch _ (pairs prefetcher-cmds)]
         (string.format "\"%s\"" fetch))
       " ")
     " "
     (table.concat
-      (icollect [fetch _ (pairs (?. config :extra-prefetcher-cmds))]
+      (icollect [fetch _ (pairs ((?. config :extra-prefetcher-cmds)))]
         (string.format "\"%s\"" fetch))
       " ")))
 
@@ -482,6 +482,7 @@
       (lua "return fetch"))))
 
 ;;; Update the values of the new prefetched fields
+;;; FIXME: reimplement
 (fn sed [opts]
   ;;; Extract opts
   (local opts (or opts {}))
@@ -610,7 +611,7 @@
   (local prefetcher
          ;;; NOTE: referencing user-defined cmds
          (or (?. config :extra-prefetcher-cmds fetch._fname)
-             (?. gen-prefetcher-cmd            fetch._fname)))
+             (?. prefetcher-cmds               fetch._fname)))
 
   ;;; Early return if not found
   (when (not prefetcher)
@@ -669,7 +670,7 @@
   (local prefetcher-extractor
          ;;; NOTE: referencing user-defined extractors
          (or (?. config :extra-prefetcher-extractors fetch._fname)
-             (?. get-prefetcher-extractor            fetch._fname)))
+             (?. prefetcher-extractors               fetch._fname)))
 
   ;;; Early return if not found
   (when (not prefetcher-extractor)

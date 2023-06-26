@@ -1,5 +1,5 @@
- local _local_1_ = require("nix-update.prefetchers") local gen_prefetcher_cmd = _local_1_["gen-prefetcher-cmd"]
- local get_prefetcher_extractor = _local_1_["get-prefetcher-extractor"]
+ local _local_1_ = require("nix-update.prefetchers") local prefetcher_cmds = _local_1_["prefetcher-cmds"]
+ local prefetcher_extractors = _local_1_["prefetcher-extractors"]
 
 
  local _local_2_ = require("nix-update._cache") local cache = _local_2_["cache"]
@@ -51,12 +51,12 @@
  local function gen_fetches_names()
 
 
- local _5_ do local tbl_17_auto = {} local i_18_auto = #tbl_17_auto for fetch, _ in pairs(gen_prefetcher_cmd) do
+ local _5_ do local tbl_17_auto = {} local i_18_auto = #tbl_17_auto for fetch, _ in pairs(prefetcher_cmds) do
  local val_19_auto = string.format("\"%s\"", fetch) if (nil ~= val_19_auto) then i_18_auto = (i_18_auto + 1) do end (tbl_17_auto)[i_18_auto] = val_19_auto else end end _5_ = tbl_17_auto end
 
 
 
- local _7_ do local tbl_17_auto = {} local i_18_auto = #tbl_17_auto local function _9_() local t_8_ = config if (nil ~= t_8_) then t_8_ = (t_8_)["extra-prefetcher-cmds"] else end return t_8_ end for fetch, _ in pairs(_9_()) do
+ local _7_ do local tbl_17_auto = {} local i_18_auto = #tbl_17_auto local _9_ do local t_8_ = config if (nil ~= t_8_) then t_8_ = (t_8_)["extra-prefetcher-cmds"] else end _9_ = t_8_ end for fetch, _ in pairs(_9_()) do
  local val_19_auto = string.format("\"%s\"", fetch) if (nil ~= val_19_auto) then i_18_auto = (i_18_auto + 1) do end (tbl_17_auto)[i_18_auto] = val_19_auto else end end _7_ = tbl_17_auto end return (table.concat(_5_, " ") .. " " .. table.concat(_7_, " ")) end
 
 
@@ -482,6 +482,7 @@
  return fetch else end end return nil end
 
 
+
  local function sed(opts)
 
  local opts0 = (opts or {})
@@ -610,7 +611,7 @@
  local prefetcher local function _91_()
 
  local t_92_ = config if (nil ~= t_92_) then t_92_ = (t_92_)["extra-prefetcher-cmds"] else end if (nil ~= t_92_) then t_92_ = (t_92_)[fetch0._fname] else end return t_92_ end local function _95_()
- local t_96_ = gen_prefetcher_cmd if (nil ~= t_96_) then t_96_ = (t_96_)[fetch0._fname] else end return t_96_ end prefetcher = (_91_() or _95_())
+ local t_96_ = prefetcher_cmds if (nil ~= t_96_) then t_96_ = (t_96_)[fetch0._fname] else end return t_96_ end prefetcher = (_91_() or _95_())
 
 
  if not prefetcher then
@@ -669,7 +670,7 @@
  local prefetcher_extractor local function _105_()
 
  local t_106_ = config if (nil ~= t_106_) then t_106_ = (t_106_)["extra-prefetcher-extractors"] else end if (nil ~= t_106_) then t_106_ = (t_106_)[fetch0._fname] else end return t_106_ end local function _109_()
- local t_110_ = get_prefetcher_extractor if (nil ~= t_110_) then t_110_ = (t_110_)[fetch0._fname] else end return t_110_ end prefetcher_extractor = (_105_() or _109_())
+ local t_110_ = prefetcher_extractors if (nil ~= t_110_) then t_110_ = (t_110_)[fetch0._fname] else end return t_110_ end prefetcher_extractor = (_105_() or _109_())
 
 
  if not prefetcher_extractor then

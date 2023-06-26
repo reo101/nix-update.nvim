@@ -1,6 +1,5 @@
-(local {: filter
-        : missing-keys
-        : concat-two}
+(local {: concat-two
+        : prefetcher-cmd-mt}
        (require :nix-update.util))
 
 (macro concat [...]
@@ -31,7 +30,7 @@
 ;; fetchPypi
 
 ;;; Define the fetchers' updaters (args -> cmd)
-(local gen-prefetcher-cmd
+(local prefetcher-cmds
   {;; Github
    :fetchFromGitHub
    {:required-cmds [:nix-prefetch]
@@ -103,41 +102,15 @@
        : args})}})
 
 ;;; Define the pre-fetchers' response extractors (cmd result -> new fields)
-(local get-prefetcher-extractor
+(local prefetcher-extractors
   {;; Github
    :fetchFromGitHub
    (fn [stdout]
      {:sha256 (. stdout 1)})})
 
-(local mt {:__call
-           (fn [self args]
-             ;;; Check for missing keys
-             (let [missing (missing-keys args self.required-keys)]
-               (when (> (length missing) 0)
-                 (vim.notify
-                   (string.format
-                     "Missing keys: %s"
-                     (vim.inspect
-                       missing)))
-                 (lua "return nil")))
-
-             ;;; Check for missing cmds
-             (let [missing (filter #(= (vim.fn.executable $.v) 0) self.required-cmds)]
-               (when (> (length missing) 0)
-                 (vim.notify
-                   (string.format
-                     "Missing commands: %s"
-                     (vim.inspect
-                       missing)))
-                 (lua "return nil")))
-
-             ;;; Finally, safely call prefetch function
-             (self.prefetch args))})
-
 ;;; Make all gen-prefetcher-cmd tables callable (for common error handling)
-(each [_ prefetcher (pairs gen-prefetcher-cmd)]
-  (setmetatable prefetcher mt))
+(each [_ prefetcher (pairs prefetcher-cmds)]
+  (setmetatable prefetcher prefetcher-cmd-mt))
 
-{:prefetcher-cmd-mt mt
- : gen-prefetcher-cmd
- : get-prefetcher-extractor}
+{: prefetcher-cmds
+ : prefetcher-extractors}

@@ -1,16 +1,10 @@
  local _local_1_ = require("nix-update.diagnostics") local set_diagnostic = _local_1_["set-diagnostic"]
 
 
- local _local_2_ = require("nix-update.prefetchers") local prefetcher_cmd_mt = _local_2_["prefetcher-cmd-mt"]
+ local _local_2_ = require("nix-update._cache") local cache = _local_2_["cache"]
 
 
- local _local_3_ = require("nix-update._cache") local cache = _local_3_["cache"]
-
-
- local _local_4_ = require("nix-update._config") local config = _local_4_["config"]
-
-
-
+ local _local_3_ = require("nix-update._config") local config = _local_3_["config"]
 
 
 
@@ -28,19 +22,19 @@
 
 
 
- local _local_6_ = opts2 local extra_prefetcher_cmds = _local_6_["extra-prefetcher-cmds"]
- local extra_prefetcher_extractors = _local_6_["extra-prefetcher-extractors"]
+ local _local_5_ = opts2 local extra_prefetcher_cmds = _local_5_["extra-prefetcher-cmds"]
+ local extra_prefetcher_extractors = _local_5_["extra-prefetcher-extractors"]
 
 
 
+ for k, v in pairs(extra_prefetcher_cmds) do
+ config["extra-prefetcher-cmds"][k] = v end
+ for k, v in pairs(extra_prefetcher_extractors) do
+ config["extra-prefetcher-extractors"][k] = v end
 
- local function _7_(_241) return setmetatable(_241, prefetcher_cmd_mt) end config["extra-prefetcher-cmds"] = vim.tbl_map(_7_, extra_prefetcher_cmds)
 
- do end (config)["extra-prefetcher-extractors"] = extra_prefetcher_extractors
-
-
- local function _8_(new, _key, value)
+ local function _6_(new, _key, value)
  if new then
- return set_diagnostic(value) else return nil end end return cache({handler = _8_}) end
+ return set_diagnostic(value) else return nil end end return cache({handler = _6_}) end
 
  return {setup = setup}
