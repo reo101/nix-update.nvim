@@ -1,5 +1,7 @@
-(local {: set-diagnostic}
-       (require "nix-update.diagnostics"))
+(local {: calculate-updates
+        : preview-update
+        : apply-update}
+       (require "nix-update.fetches"))
 
 (local {: cache}
        (require "nix-update._cache"))
@@ -9,6 +11,29 @@
 
 ;;; TODO: sort imports/exports alphabetically
 
+(macro save-options [opts-symbol options]
+  (assert-compile
+    (sym? opts-symbol)
+    "Expected a symbol"
+    opts-symbol)
+  (assert-compile
+    (table? options)
+    "Expected list of option names"
+    options)
+  (var res
+    `(let [opts#
+            (vim.tbl_deep_extend
+              :keep
+              ,opts-symbol ;;; Keep user-defined values
+              ,(collect [_ v (pairs options)]
+                 (values v [])))]))
+  ;;; Store the config options
+  (each [_ option (ipairs options)]
+    (table.insert res
+      `(each [k# v# (pairs (. opts# ,option))]
+         (tset (. config ,option) k# v#))))
+  res)
+
 (fn setup [opts]
   ;;; Extract opts
   (local opts
@@ -16,25 +41,33 @@
   (local opts
          (collect [k v (pairs opts)]
            (values (string.gsub k "_" "-") v)))
-  (local opts
-         (vim.tbl_deep_extend
-           :keep ;; Keep user-defined values
-           opts
-           {:extra-prefetcher-cmds       []
-            :extra-prefetcher-extractors []}))
-  (local {: extra-prefetcher-cmds
-          : extra-prefetcher-extractors}
-         opts)
 
-  ;;; Store the config options
-  (each [k v (pairs extra-prefetcher-cmds)]
-    (tset config.extra-prefetcher-cmds k v))
-  (each [k v (pairs extra-prefetcher-extractors)]
-    (tset config.extra-prefetcher-extractors k v))
+  ;;; Save user options in global config
+  (save-options
+    opts
+    [:extra-prefetcher-cmds
+     :extra-prefetcher-extractors])
 
   ;;; Set cache `on-index` handler
-  (cache {:handler (fn [new _key value]
-                     (when new
-                       (set-diagnostic value)))}))
+  (cache
+    {:handler
+      (fn [new _key value]
+        (when new
+          ;;; Extract opts
+          (local {: bufnr
+                  : fetch
+                  : data
+                  : err}
+                 value)
+          (when (and err
+                     (= (length (or data [])) 0))
+            (vim.print "Opa")
+            (lua "return"))
+          (local updates (calculate-updates
+                           {: bufnr
+                            : fetch
+                            :new-data data}))
+          (each [_ update (ipairs updates)]
+            (preview-update update))))}))
 
 {: setup}

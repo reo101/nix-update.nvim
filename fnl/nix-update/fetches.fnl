@@ -481,9 +481,8 @@
             cursor-col)
       (lua "return fetch"))))
 
-;;; Update the values of the new prefetched fields
-;;; FIXME: reimplement
-(fn sed [opts]
+;;; Calculate the text updates for one KV pair
+(fn calculate-updates [opts]
   ;;; Extract opts
   (local opts (or opts {}))
   (local {: bufnr
@@ -491,93 +490,165 @@
           : new-data}
          opts)
 
+  (var updates [])
   (each [key new-value (pairs new-data)]
-    (local existing (?. fetch :_fargs key))
+    (local existing (?. fetch :_fargs key :fragments))
     (if existing
-        ;;; If already exists - update
-        (do
-          (var i-fragment  1)
-          (var i-new-value 1)
-          (var short-circuit? false)
-          (while (and (not short-circuit?)
-                     (<= i-new-value (length new-value)))
-            (let [fragment (. existing i-fragment)
-                  {:node    fragment-node
-                   :value   fragment-value
-                   :?interp fragment-?interp} fragment]
-              (if
-                ;;; TODO: handle unexpected ends
-                false
-                nil
-                ;;; If fragment is same - leave alone
-                (= (string.sub new-value
-                               i-new-value
-                               (+ i-new-value
-                                  (length fragment-value)
-                                  -1))
-                   fragment-value)
-                (do
-                  (set i-fragment  (+ i-fragment  1))
-                  (set i-new-value (+ i-new-value (length fragment-value))))
-                ;;; If on last fragment - update it
-                (= i-fragment (length existing))
-                (do
-                  (local {: start-row : start-col : end-row : end-col}
-                         (coords {: bufnr :node fragment-node}))
-                  (vim.api.nvim_buf_set_text
-                    bufnr
-                    start-row
-                    start-col
-                    end-row
-                    end-col
-                    [(string.sub new-value i-new-value)])
-                  (set short-circuit? true))
-                ;;; If neither - nuke
-                (do
-                  ;;; TODO: collect all discarded interpolated fragments
-                  ;;;       and report to the user that they are invalidated
-                  (local last-fragment
-                         (. existing (length existing)))
-                  (local {:?interp last-fragment-?interp
-                          :node    last-fragment-node}
-                         last-fragment)
-                  (local {: start-row : start-col} (coords {: bufnr
-                                                            :node (or fragment-?interp
-                                                                      fragment-node)}))
-                  (local {: end-row : end-col} (coords {: bufnr
-                                                        :node (or last-fragment-?interp
-                                                                last-fragment-node)}))
-                  (vim.api.nvim_buf_set_text
-                    bufnr
-                    start-row
-                    start-col
-                    end-row
-                    end-col
-                    [(string.sub new-value i-new-value)])
-                  (set short-circuit? true))))))
-        ;;; If not - insert it at the end
-        (let [{: end-row} (coords {: bufnr :node fetch._fwhole})]
-          (vim.api.nvim_buf_set_lines
-            bufnr
-            end-row
-            end-row
-            true
-            [(string.format
-               "%s = \"%s\";"
-               key
-               new-value)])
-          ;;; TODO:
-          ;;; nvim_buf_set_mark
-          ;;; nvim_win_set_cursor
-          ;;; ==
-          ;;; nvim_buf_get_mark
-          ;;; nvim_win_set_cursor
-          (vim.cmd
-            (string.format
-              "normal ma%sggj==`a"
-              end-row)))))
+      ;;; If already exists - update
+      (do
+        (var i-fragment  1)
+        (var i-new-value 1)
+        (var short-circuit? false)
+        (while (and (not short-circuit?)
+                   (<= i-new-value (length new-value)))
+          (let [fragment (. existing i-fragment)
+                {:node    fragment-node
+                 :value   fragment-value
+                 :?interp fragment-?interp} fragment]
+            (if
+              ;;; TODO: handle unexpected ends
+              false
+              (values nil nil)
+              ;;; If fragment is same - leave alone
+              (= (string.sub new-value
+                             i-new-value
+                             (+ i-new-value
+                                (length fragment-value)
+                                -1))
+                 fragment-value)
+              (do
+                (set i-fragment  (+ i-fragment  1))
+                (set i-new-value (+ i-new-value (length fragment-value))))
+              ;;; If on last fragment - update it
+              (= i-fragment (length existing))
+              (do
+                (local {: start-row : start-col : end-row : end-col}
+                       (coords {: bufnr :node fragment-node}))
+                (table.insert
+                  updates
+                  {:type :old
+                   :data {: bufnr
+                          : start-row
+                          : start-col
+                          : end-row
+                          : end-col
+                          :replacement [(string.sub new-value i-new-value)]}})
+                (set short-circuit? true))
+              ;;; If neither - nuke
+              (do
+                ;;; TODO: collect all discarded interpolated fragments
+                ;;;       and report to the user that they are invalidated
+                (local last-fragment
+                       (. existing (length existing)))
+                (local {:?interp last-fragment-?interp
+                        :node    last-fragment-node}
+                       last-fragment)
+                (local {: start-row : start-col}
+                       (coords {: bufnr
+                                :node (or fragment-?interp
+                                          fragment-node)}))
+                (local {: end-row : end-col}
+                       (coords {: bufnr
+                                :node (or last-fragment-?interp
+                                          last-fragment-node)}))
+                (table.insert
+                  updates
+                  {:type :old
+                   :data {: bufnr
+                          : start-row
+                          : start-col
+                          : end-row
+                          : end-col
+                          :replacement [(string.sub new-value i-new-value)]}})
+                (set short-circuit? true))))))
+      ;;; If not - insert it at the end
+      (let [{: end-row : end-col} (coords {: bufnr :node fetch._fwhole})]
+        (table.insert
+          updates
+          {:type :new
+           :data {: bufnr
+                  :start end-row
+                  :end end-row
+                  :replacement [(string.format
+                                  "%s%s = \"%s\";"
+                                  ;;; Offset
+                                  (vim.fn.repeat
+                                    " "
+                                    (+ (- end-col 1)
+                                       (. vim :bo bufnr :shiftwidth)))
+                                  key
+                                  new-value)]}}))))
 
-  (vim.notify "Prefetch complete!"))
+  ;;; Return calculated updates
+  updates)
+
+;;; Preview update
+(fn preview-update [update]
+  ;;; Create namespace for the extmarks
+  (local namespace (vim.api.nvim_create_namespace "NixUpdate"))
+
+  (match update
+    {:type :old
+     :data {: bufnr
+            : start-row
+            : start-col
+            : end-row
+            : end-col
+            : replacement}}
+    (vim.api.nvim_buf_set_extmark
+      bufnr
+      namespace
+      start-row
+      start-col
+      {:end_row end-row
+       :end_col end-col
+       :hl_mode :replace
+       :virt_text
+        (icollect [_ line (ipairs replacement)]
+          [line :DiffAdd])
+       :virt_text_pos :overlay})
+    {:type :new
+     :data {: bufnr
+            : start
+            : replacement}}
+    (vim.api.nvim_buf_set_extmark
+      bufnr
+      namespace
+      start
+      0
+      {:virt_lines
+        (icollect [_ line (ipairs replacement)]
+          [[line :DiffAdd]])
+       :virt_lines_above true})))
+
+;;; Apply update to buffer
+(fn apply-update [update]
+  (match update
+    {:type :old
+     :data {: bufnr
+            : start-row
+            : start-col
+            : end-row
+            : end-col
+            : replacement}}
+    (vim.api.nvim_buf_set_text
+      bufnr
+      start-row
+      start-col
+      end-row
+      end-col
+      replacement)
+    {:type :new
+     :data {: bufnr
+            : start
+            : end
+            : replacement}}
+    (vim.api.nvim_buf_set_lines
+      bufnr
+      start
+      end
+      true
+      replacement)))
 
 ;;; Prefetch given fetch
 ;;; store its results in the global state table
@@ -717,4 +788,7 @@
  : fragments-to-value
  : find-used-fetches
  : get-fetch-at-cursor
+ : calculate-updates
+ : preview-update
+ : apply-update
  : prefetch-fetch}

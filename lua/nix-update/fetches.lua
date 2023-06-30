@@ -482,8 +482,7 @@
  return fetch else end end return nil end
 
 
-
- local function sed(opts)
+ local function calculate_updates(opts)
 
  local opts0 = (opts or {})
  local _local_77_ = opts0 local bufnr = _local_77_["bufnr"]
@@ -491,8 +490,9 @@
  local new_data = _local_77_["new-data"]
 
 
+ local updates = {}
  for key, new_value in pairs(new_data) do
- local existing do local t_78_ = fetch if (nil ~= t_78_) then t_78_ = (t_78_)._fargs else end if (nil ~= t_78_) then t_78_ = (t_78_)[key] else end existing = t_78_ end
+ local existing do local t_78_ = fetch if (nil ~= t_78_) then t_78_ = (t_78_)._fargs else end if (nil ~= t_78_) then t_78_ = (t_78_)[key] else end if (nil ~= t_78_) then t_78_ = (t_78_).fragments else end existing = t_78_ end
  if existing then local i_fragment = 1 local i_new_value = 1 local short_circuit_3f = false
 
 
@@ -502,9 +502,9 @@
  while (not short_circuit_3f and (i_new_value <= #new_value)) do
 
  local fragment = existing[i_fragment]
- local _let_81_ = fragment local fragment_node = _let_81_["node"]
- local fragment_value = _let_81_["value"]
- local fragment__3finterp = _let_81_["?interp"]
+ local _let_82_ = fragment local fragment_node = _let_82_["node"]
+ local fragment_value = _let_82_["value"]
+ local fragment__3finterp = _let_82_["?interp"]
  if false then elseif (string.sub(new_value, i_new_value, (i_new_value + #fragment_value + -1)) == fragment_value) then
 
 
@@ -522,9 +522,11 @@
 
 
 
- local _local_82_ = coords({bufnr = bufnr, node = fragment_node}) local start_row = _local_82_["start-row"] local start_col = _local_82_["start-col"] local end_row = _local_82_["end-row"] local end_col = _local_82_["end-col"]
+ local _local_83_ = coords({bufnr = bufnr, node = fragment_node}) local start_row = _local_83_["start-row"] local start_col = _local_83_["start-col"] local end_row = _local_83_["end-row"] local end_col = _local_83_["end-col"]
 
- vim.api.nvim_buf_set_text(bufnr, start_row, start_col, end_row, end_col, {string.sub(new_value, i_new_value)}) short_circuit_3f = true else
+ table.insert(updates, {type = "old", data = {bufnr = bufnr, ["start-row"] = start_row, ["start-col"] = start_col, ["end-row"] = end_row, ["end-col"] = end_col, replacement = {string.sub(new_value, i_new_value)}}}) short_circuit_3f = true else
+
+
 
 
 
@@ -538,26 +540,18 @@
 
 
  local last_fragment = existing[#existing]
- local _local_83_ = last_fragment local last_fragment__3finterp = _local_83_["?interp"]
- local last_fragment_node = _local_83_["node"]
+ local _local_84_ = last_fragment local last_fragment__3finterp = _local_84_["?interp"]
+ local last_fragment_node = _local_84_["node"]
 
- local _local_84_ = coords({bufnr = bufnr, node = (fragment__3finterp or fragment_node)}) local start_row = _local_84_["start-row"] local start_col = _local_84_["start-col"]
-
-
- local _local_85_ = coords({bufnr = bufnr, node = (last_fragment__3finterp or last_fragment_node)}) local end_row = _local_85_["end-row"] local end_col = _local_85_["end-col"]
-
-
- vim.api.nvim_buf_set_text(bufnr, start_row, start_col, end_row, end_col, {string.sub(new_value, i_new_value)}) short_circuit_3f = true end end else
+ local _local_85_ = coords({bufnr = bufnr, node = (fragment__3finterp or fragment_node)}) local start_row = _local_85_["start-row"] local start_col = _local_85_["start-col"]
 
 
 
+ local _local_86_ = coords({bufnr = bufnr, node = (last_fragment__3finterp or last_fragment_node)}) local end_row = _local_86_["end-row"] local end_col = _local_86_["end-col"]
 
 
 
-
-
- local _let_87_ = coords({bufnr = bufnr, node = fetch._fwhole}) local end_row = _let_87_["end-row"]
- vim.api.nvim_buf_set_lines(bufnr, end_row, end_row, true, {string.format("%s = \"%s\";", key, new_value)})
+ table.insert(updates, {type = "old", data = {bufnr = bufnr, ["start-row"] = start_row, ["start-col"] = start_col, ["end-row"] = end_row, ["end-col"] = end_col, replacement = {string.sub(new_value, i_new_value)}}}) short_circuit_3f = true end end else
 
 
 
@@ -568,24 +562,101 @@
 
 
 
+ local _let_88_ = coords({bufnr = bufnr, node = fetch._fwhole}) local end_row = _let_88_["end-row"] local end_col = _let_88_["end-col"]
+ table.insert(updates, {type = "new", data = {bufnr = bufnr, start = end_row, ["end"] = end_row, replacement = {string.format("%s%s = \"%s\";", vim.fn["repeat"](" ", ((end_col - 1) + vim.bo[bufnr].shiftwidth)), key, new_value)}}}) end end
 
 
 
 
- vim.cmd(string.format("normal ma%sggj==`a", end_row)) end end
 
 
 
 
- return vim.notify("Prefetch complete!") end
+
+
+
+
+
+
+
+
+ return updates end
+
+
+ local function preview_update(update)
+
+ local namespace = vim.api.nvim_create_namespace("NixUpdate")
+
+ local _90_ = update if ((_G.type(_90_) == "table") and ((_90_).type == "old") and ((_G.type((_90_).data) == "table") and (nil ~= ((_90_).data).bufnr) and (nil ~= ((_90_).data)["start-row"]) and (nil ~= ((_90_).data)["start-col"]) and (nil ~= ((_90_).data)["end-row"]) and (nil ~= ((_90_).data)["end-col"]) and (nil ~= ((_90_).data).replacement))) then local bufnr = ((_90_).data).bufnr local start_row = ((_90_).data)["start-row"] local start_col = ((_90_).data)["start-col"] local end_row = ((_90_).data)["end-row"] local end_col = ((_90_).data)["end-col"] local replacement = ((_90_).data).replacement
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ local _91_ do local tbl_17_auto = {} local i_18_auto = #tbl_17_auto for _, line in ipairs(replacement) do
+ local val_19_auto = {line, "DiffAdd"} if (nil ~= val_19_auto) then i_18_auto = (i_18_auto + 1) do end (tbl_17_auto)[i_18_auto] = val_19_auto else end end _91_ = tbl_17_auto end return vim.api.nvim_buf_set_extmark(bufnr, namespace, start_row, start_col, {end_row = end_row, end_col = end_col, hl_mode = "replace", virt_text = _91_, virt_text_pos = "overlay"}) elseif ((_G.type(_90_) == "table") and ((_90_).type == "new") and ((_G.type((_90_).data) == "table") and (nil ~= ((_90_).data).bufnr) and (nil ~= ((_90_).data).start) and (nil ~= ((_90_).data).replacement))) then local bufnr = ((_90_).data).bufnr local start = ((_90_).data).start local replacement = ((_90_).data).replacement
+
+
+
+
+
+
+
+
+
+
+
+ local _93_ do local tbl_17_auto = {} local i_18_auto = #tbl_17_auto for _, line in ipairs(replacement) do
+ local val_19_auto = {{line, "DiffAdd"}} if (nil ~= val_19_auto) then i_18_auto = (i_18_auto + 1) do end (tbl_17_auto)[i_18_auto] = val_19_auto else end end _93_ = tbl_17_auto end return vim.api.nvim_buf_set_extmark(bufnr, namespace, start, 0, {virt_lines = _93_, virt_lines_above = true}) else return nil end end
+
+
+
+ local function apply_update(update)
+ local _96_ = update if ((_G.type(_96_) == "table") and ((_96_).type == "old") and ((_G.type((_96_).data) == "table") and (nil ~= ((_96_).data).bufnr) and (nil ~= ((_96_).data)["start-row"]) and (nil ~= ((_96_).data)["start-col"]) and (nil ~= ((_96_).data)["end-row"]) and (nil ~= ((_96_).data)["end-col"]) and (nil ~= ((_96_).data).replacement))) then local bufnr = ((_96_).data).bufnr local start_row = ((_96_).data)["start-row"] local start_col = ((_96_).data)["start-col"] local end_row = ((_96_).data)["end-row"] local end_col = ((_96_).data)["end-col"] local replacement = ((_96_).data).replacement
+
+
+
+
+
+
+
+ return vim.api.nvim_buf_set_text(bufnr, start_row, start_col, end_row, end_col, replacement) elseif ((_G.type(_96_) == "table") and ((_96_).type == "new") and ((_G.type((_96_).data) == "table") and (nil ~= ((_96_).data).bufnr) and (nil ~= ((_96_).data).start) and (nil ~= ((_96_).data)["end"]) and (nil ~= ((_96_).data).replacement))) then local bufnr = ((_96_).data).bufnr local start = ((_96_).data).start local _end = ((_96_).data)["end"] local replacement = ((_96_).data).replacement
+
+
+
+
+
+
+
+
+
+
+
+ return vim.api.nvim_buf_set_lines(bufnr, start, _end, true, replacement) else return nil end end
+
+
+
+
+
 
 
 
  local function prefetch_fetch(opts)
 
  local opts0 = (opts or {})
- local _local_89_ = opts0 local bufnr = _local_89_["bufnr"]
- local fetch = _local_89_["fetch"]
+ local _local_98_ = opts0 local bufnr = _local_98_["bufnr"]
+ local fetch = _local_98_["fetch"]
 
 
 
@@ -608,10 +679,10 @@
  return else end
 
 
- local prefetcher local function _91_()
+ local prefetcher local function _100_()
 
- local t_92_ = config if (nil ~= t_92_) then t_92_ = (t_92_)["extra-prefetcher-cmds"] else end if (nil ~= t_92_) then t_92_ = (t_92_)[fetch0._fname] else end return t_92_ end local function _95_()
- local t_96_ = prefetcher_cmds if (nil ~= t_96_) then t_96_ = (t_96_)[fetch0._fname] else end return t_96_ end prefetcher = (_91_() or _95_())
+ local t_101_ = config if (nil ~= t_101_) then t_101_ = (t_101_)["extra-prefetcher-cmds"] else end if (nil ~= t_101_) then t_101_ = (t_101_)[fetch0._fname] else end return t_101_ end local function _104_()
+ local t_105_ = prefetcher_cmds if (nil ~= t_105_) then t_105_ = (t_105_)[fetch0._fname] else end return t_105_ end prefetcher = (_100_() or _104_())
 
 
  if not prefetcher then
@@ -630,17 +701,17 @@
 
  for farg_name, farg_binding in pairs(fetch0._fargs) do
 
- local _99_ = fragments_to_value(farg_binding.fragments) if ((_G.type(_99_) == "table") and (nil ~= (_99_).good)) then local result = (_99_).good
+ local _108_ = fragments_to_value(farg_binding.fragments) if ((_G.type(_108_) == "table") and (nil ~= (_108_).good)) then local result = (_108_).good
 
 
- argument_values0[farg_name] = result elseif ((_G.type(_99_) == "table") and (nil ~= (_99_).bad)) then local notfounds = (_99_).bad
+ argument_values0[farg_name] = result elseif ((_G.type(_108_) == "table") and (nil ~= (_108_).bad)) then local notfounds = (_108_).bad
 
 
  table.insert(notfounds_pairs, {["farg-name"] = farg_name, notfounds = notfounds}) else end end
 
 
 
- for _, _101_ in ipairs(notfounds_pairs) do local _each_102_ = _101_ local farg_name = _each_102_["farg-name"] local notfounds = _each_102_["notfounds"]
+ for _, _110_ in ipairs(notfounds_pairs) do local _each_111_ = _110_ local farg_name = _each_111_["farg-name"] local notfounds = _each_111_["notfounds"]
  vim.notify(string.format("Identifiers %s not found while evaluating %s!", vim.inspect(notfounds), farg_name)) end
 
 
@@ -667,10 +738,10 @@
  return else end
 
 
- local prefetcher_extractor local function _105_()
+ local prefetcher_extractor local function _114_()
 
- local t_106_ = config if (nil ~= t_106_) then t_106_ = (t_106_)["extra-prefetcher-extractors"] else end if (nil ~= t_106_) then t_106_ = (t_106_)[fetch0._fname] else end return t_106_ end local function _109_()
- local t_110_ = prefetcher_extractors if (nil ~= t_110_) then t_110_ = (t_110_)[fetch0._fname] else end return t_110_ end prefetcher_extractor = (_105_() or _109_())
+ local t_115_ = config if (nil ~= t_115_) then t_115_ = (t_115_)["extra-prefetcher-extractors"] else end if (nil ~= t_115_) then t_115_ = (t_115_)[fetch0._fname] else end return t_115_ end local function _118_()
+ local t_119_ = prefetcher_extractors if (nil ~= t_119_) then t_119_ = (t_119_)[fetch0._fname] else end return t_119_ end prefetcher_extractor = (_114_() or _118_())
 
 
  if not prefetcher_extractor then
@@ -683,7 +754,7 @@
 
 
 
- local function _115_(_113_) local _arg_114_ = _113_ local stdout = _arg_114_["stdout"] local stderr = _arg_114_["stderr"]
+ local function _124_(_122_) local _arg_123_ = _122_ local stdout = _arg_123_["stdout"] local stderr = _arg_123_["stderr"]
  if (#stdout == 0) then
  cache[fetch0._fwhole] = {bufnr = bufnr0, fetch = fetch0, err = string.format("Oopsie: %s", vim.inspect(stderr))}
 
@@ -696,7 +767,7 @@
 
  return else end
 
- cache[fetch0._fwhole] = {bufnr = bufnr0, fetch = fetch0, data = prefetcher_extractor(stdout)} return nil end call_command(prefetcher_cmd, _115_)
+ cache[fetch0._fwhole] = {bufnr = bufnr0, fetch = fetch0, data = prefetcher_extractor(stdout)} return nil end call_command(prefetcher_cmd, _124_)
 
 
 
@@ -708,4 +779,4 @@
 
 
 
- return {["fetches-query-string"] = fetches_query_string, ["gen-fetches-names"] = gen_fetches_names, ["gen-fetches-query"] = gen_fetches_query, ["get-root"] = get_root, ["find-all-local-bindings"] = find_all_local_bindings, ["try-get-binding-value"] = try_get_binding_value, ["fragments-to-value"] = fragments_to_value, ["find-used-fetches"] = find_used_fetches, ["get-fetch-at-cursor"] = get_fetch_at_cursor, ["prefetch-fetch"] = prefetch_fetch}
+ return {["fetches-query-string"] = fetches_query_string, ["gen-fetches-names"] = gen_fetches_names, ["gen-fetches-query"] = gen_fetches_query, ["get-root"] = get_root, ["find-all-local-bindings"] = find_all_local_bindings, ["try-get-binding-value"] = try_get_binding_value, ["fragments-to-value"] = fragments_to_value, ["find-used-fetches"] = find_used_fetches, ["get-fetch-at-cursor"] = get_fetch_at_cursor, ["calculate-updates"] = calculate_updates, ["preview-update"] = preview_update, ["apply-update"] = apply_update, ["prefetch-fetch"] = prefetch_fetch}
