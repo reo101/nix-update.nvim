@@ -39,56 +39,56 @@
     (lua "return"))
 
   ;;; Create namespace for the extmarks
-  (local namespace (vim.api.nvim_create_namespace "NixPrefetch"))
+  (local namespace (vim.api.nvim_create_namespace "NixUpdate"))
 
   (when (and err
              (= (length (or data [])) 0))
-    (vim.diagnostic.set
-      namespace
-      bufnr
-      [{:lnum (. (coords {: bufnr :node fetch._fwhole}) :start-row)
-        :col  (. (coords {: bufnr :node fetch._fwhole}) :start-col)
-        :severity vim.diagnostic.severity.ERROR
-        :message (vim.inspect err)
-        :source :NixUpdate}])
+    (let [{: start-row
+           : start-col}
+          (coords {: bufnr :node fetch._fwhole})]
+      (vim.diagnostic.set
+        namespace
+        bufnr
+        [{:lnum start-row
+          :col start-col
+          :severity vim.diagnostic.severity.ERROR
+          :message (vim.inspect err)
+          :source :NixUpdate}]))
     (lua "return"))
 
   (local diagnostics
          (icollect [key value (pairs data)]
-           (do
-             (local {: start-row
-                     : start-col
-                     : message
-                     : severity}
-                    (let [farg (. fetch._fargs key)]
-                      (if farg
-                        (let [{: start-row : start-col}
-                              (coords {: bufnr :node farg.binding})]
-                          {: start-row
-                           : start-col
-                           :message (string.format
-                                      "Update field \"%s\" to \"%s\""
-                                      key
-                                      value)
-                           :severity vim.diagnostic.severity.HINT})
-                        ;; else
-                        (let [{: start-row : start-col}
-                              (coords {: bufnr :node fetch._fwhole})]
-                          {: start-row
-                           : start-col
-                           :message (string.format
-                                      "Add new field \"%s\" with value \"%s\""
-                                      key
-                                      value)
-                           :severity vim.diagnostic.severity.WARN}))))
+           (let [{: start-row
+                  : start-col
+                  : message
+                  : severity}
+                 (let [farg (. fetch._fargs key)]
+                   (if farg
+                     ;;; Existing field
+                     (let [{: start-row : start-col}
+                           (coords {: bufnr :node farg.binding})]
+                       {: start-row
+                        : start-col
+                        :message (string.format
+                                   "Update field \"%s\" to \"%s\""
+                                   key
+                                   value)
+                        :severity vim.diagnostic.severity.HINT})
+                     ;;; New field
+                     (let [{: start-row : start-col}
+                           (coords {: bufnr :node fetch._fwhole})]
+                       {: start-row
+                        : start-col
+                        :message (string.format
+                                   "Add new field \"%s\" with value \"%s\""
+                                   key
+                                   value)
+                        :severity vim.diagnostic.severity.WARN})))]
              {:lnum start-row
               :col  start-col
               : severity
               : message
               :source :NixUpdate})))
-
-  ;;; Create namespace for the diagnostics
-  (local namespace (vim.api.nvim_create_namespace "NixPrefetch"))
 
   ;;; Update diagnostics
   (vim.diagnostic.set

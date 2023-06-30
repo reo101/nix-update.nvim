@@ -39,11 +39,14 @@
  return else end
 
 
- local namespace = vim.api.nvim_create_namespace("NixPrefetch")
+ local namespace = vim.api.nvim_create_namespace("NixUpdate")
 
  if (err and (#(data or {}) == 0)) then
 
- vim.diagnostic.set(namespace, bufnr, {{lnum = (coords({bufnr = bufnr, node = fetch._fwhole}))["start-row"], col = (coords({bufnr = bufnr, node = fetch._fwhole}))["start-col"], severity = vim.diagnostic.severity.ERROR, message = vim.inspect(err), source = "NixUpdate"}})
+ do local _let_7_ = coords({bufnr = bufnr, node = fetch._fwhole}) local start_row = _let_7_["start-row"]
+ local start_col = _let_7_["start-col"]
+
+ vim.diagnostic.set(namespace, bufnr, {{lnum = start_row, col = start_col, severity = vim.diagnostic.severity.ERROR, message = vim.inspect(err), source = "NixUpdate"}}) end
 
 
 
@@ -59,10 +62,10 @@
 
 
 
-
- local function _9_() local farg = fetch._fargs[key]
+ local function _10_() local farg = fetch._fargs[key]
  if farg then
- local _let_10_ = coords({bufnr = bufnr, node = farg.binding}) local start_row = _let_10_["start-row"] local start_col = _let_10_["start-col"]
+
+ local _let_11_ = coords({bufnr = bufnr, node = farg.binding}) local start_row = _let_11_["start-row"] local start_col = _let_11_["start-col"]
 
  return {["start-row"] = start_row, ["start-col"] = start_col, message = string.format("Update field \"%s\" to \"%s\"", key, value), severity = vim.diagnostic.severity.HINT} else
 
@@ -72,9 +75,9 @@
 
 
 
- local _let_11_ = coords({bufnr = bufnr, node = fetch._fwhole}) local start_row = _let_11_["start-row"] local start_col = _let_11_["start-col"]
+ local _let_12_ = coords({bufnr = bufnr, node = fetch._fwhole}) local start_row = _let_12_["start-row"] local start_col = _let_12_["start-col"]
 
- return {["start-row"] = start_row, ["start-col"] = start_col, message = string.format("Add new field \"%s\" with value \"%s\"", key, value), severity = vim.diagnostic.severity.WARN} end end local _local_8_ = _9_() local start_row = _local_8_["start-row"] local start_col = _local_8_["start-col"] local message = _local_8_["message"] local severity = _local_8_["severity"]
+ return {["start-row"] = start_row, ["start-col"] = start_col, message = string.format("Add new field \"%s\" with value \"%s\"", key, value), severity = vim.diagnostic.severity.WARN} end end local _let_9_ = _10_() local start_row = _let_9_["start-row"] local start_col = _let_9_["start-col"] local message = _let_9_["message"] local severity = _let_9_["severity"]
 
 
 
@@ -88,10 +91,7 @@
 
 
 
- local namespace0 = vim.api.nvim_create_namespace("NixPrefetch")
-
-
- return vim.diagnostic.set(namespace0, bufnr, concat_two(vim.diagnostic.get(nil, {namespace = namespace0}), diagnostics)) end
+ return vim.diagnostic.set(namespace, bufnr, concat_two(vim.diagnostic.get(nil, {namespace = namespace}), diagnostics)) end
 
 
 
@@ -106,7 +106,7 @@
  local function remove_diagnostic(opts)
 
  local opts0 = (opts or {})
- local _local_14_ = opts0 local bufnr = _local_14_["bufnr"]
+ local _local_15_ = opts0 local bufnr = _local_15_["bufnr"]
 
 
 
@@ -116,7 +116,7 @@
  local function NixPrefetch(opts)
 
  local opts0 = (opts or {})
- local _local_15_ = opts0 local bufnr = _local_15_["bufnr"]
+ local _local_16_ = opts0 local bufnr = _local_16_["bufnr"]
 
 
 
@@ -142,6 +142,6 @@
  prefetch_fetch({bufnr = bufnr0, fetch = fetch}) end return nil end
 
 
- local function _16_() return NixPrefetch() end vim.api.nvim_create_user_command("NixPrefetch", _16_, {})
+ local function _17_() return NixPrefetch() end vim.api.nvim_create_user_command("NixPrefetch", _17_, {})
 
  return {["set-diagnostic"] = set_diagnostic, ["remove-diagnostic"] = remove_diagnostic}
