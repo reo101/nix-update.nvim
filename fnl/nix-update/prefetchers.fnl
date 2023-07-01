@@ -29,46 +29,68 @@
 ;; compileEmacsWikiFile
 ;; fetchPypi
 
-;;; Define the fetchers' updaters (args -> cmd)
-(local prefetcher-cmds
+;;; Define the fetchers'
+;;;  (args -> cmd)
+;;; Define the pre-fetchers' response extractors (cmd result -> new fields)
+;;; {
+;;;   :required-cmds ;; Required programs to be on $PATH
+;;;   :required-keys ;; Required keys to be passed in
+;;;   :prefetcher    ;; Generate the prefetch command + arguments
+;;;   :extracter     ;; Extract the new value(s) from the prefetch result
+;;; }
+(local prefetchers
   {;; Github
    :fetchFromGitHub
-   {:required-cmds [:nix-prefetch]
+   {:required-cmds [:nix-prefetch-git]
     :required-keys [:owner
                     :repo
                     :rev]
-    :prefetch
-    (fn [{: owner
-          : repo
-          : rev
-          : ?fetchSubmodules}]
-      (local cmd "nix-prefetch")
+    ;; (args -> cmd)
+    :prefetcher
+     (fn [{: owner
+           : repo
+           : rev
+           : ?fetchSubmodules}]
+       (local cmd "nix-prefetch")
 
-      (local args (concat ["fetchFromGitHub"]
-                          ["--owner" owner]
-                          ["--repo"  repo]
-                          ["--rev"   rev]
-                          (if (= (?. ?fetchSubmodules :value) :true)
-                              ["--fetchSubmodules"]
-                              [])))
+       (local args (concat ["--quiet"]
+                           ["--url" (string.format
+                                      "https://www.github.com/%s/%s"
+                                      owner
+                                      repo)]
+                           ["--rev" rev]
+                           (if (= ?fetchSubmodules :true)
+                               ["--fetch-submodules"]
+                               [])))
 
-      {: cmd
-       : args})}
+       {: cmd
+        : args})
+    ;; (cmd result -> new fields)
+    :extractor
+     (fn [stdout]
+      {:sha256
+        (-> stdout
+            (table.concat)
+            (vim.json.decode)
+            (. :sha256))})}
 
    ;; Fetch Cargo
    :buildRustPackage
    {:required-cmds []
     :required-keys []
-    :prefetch
-    (fn [{}]
-      (local cmd nil)
+    :prefetcher
+     (fn [{}]
+       (local cmd nil)
 
-      (local args nil)
+       (local args nil)
 
-      ;; nix-prefetch '{ sha256 }: i3status-rust.cargoDeps.overrideAttrs (_: { cargoSha256 = sha256; })'
+       ;; nix-prefetch '{ sha256 }: i3status-rust.cargoDeps.overrideAttrs (_: { cargoSha256 = sha256; })'
 
-      {: cmd
-       : args})}
+       {: cmd
+        : args})
+    :extractor
+     (fn [stdout]
+       {})}
 
    ;; Fetch GIT
    :fetchgit
@@ -76,41 +98,32 @@
     :required-keys [:owner
                     :repo
                     :rev]
-    :prefetch
-    (fn [{: owner
-          : repo
-          : rev
-          : ?fetchSubmodules}]
-      (local cmd "nix-prefetch-git")
+    :prefetcher
+     (fn [{: owner
+           : repo
+           : rev
+           : ?fetchSubmodules}]
+       (local cmd "nix-prefetch-git")
 
-      (local args (concat ["--no-deepClone"]
-                          (if (= (?. ?fetchSubmodules :value) :true)
-                            ["--fetch-submodules"]
-                            [])
-                          ["--quiet"
-                           (string.format
-                             "https://github.com/%s/%s.git"
-                             owner
-                             repo)
-                           rev]))
+       (local args (concat ["--no-deepClone"]
+                           (if (= (?. ?fetchSubmodules :value) :true)
+                             ["--fetch-submodules"]
+                             [])
+                           ["--quiet"
+                            (string.format
+                              "https://github.com/%s/%s.git"
+                              owner
+                              repo)
+                            rev]))
 
-      ;; (local res (-> (concat [cmd] args)
-      ;;                (vim.fn.system)
-      ;;                (vim.json.decode)))))})
-
-      {: cmd
-       : args})}})
-
-;;; Define the pre-fetchers' response extractors (cmd result -> new fields)
-(local prefetcher-extractors
-  {;; Github
-   :fetchFromGitHub
-   (fn [stdout]
-     {:sha256 (. stdout 1)})})
+       {: cmd
+        : args})
+    :extractor
+     (fn [stdout]
+       {})}})
 
 ;;; Make all gen-prefetcher-cmd tables callable (for common error handling)
-(each [_ prefetcher (pairs prefetcher-cmds)]
+(each [_ prefetcher (pairs prefetchers)]
   (setmetatable prefetcher prefetcher-cmd-mt))
 
-{: prefetcher-cmds
- : prefetcher-extractors}
+{: prefetchers}

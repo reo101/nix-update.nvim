@@ -59,15 +59,19 @@
  local data = _local_6_["data"]
  local err = _local_6_["err"]
 
- if (err and (#(data or {}) == 0)) then
+ if ((#(data or {}) == 0) and err) then
 
- vim.print("Opa")
+ vim.notify("Could not prefetch")
+ vim.print({data = data, err = err})
  return else end
  local updates = calculate_updates({bufnr = bufnr, fetch = fetch, ["new-data"] = data})
 
 
 
  for _, update in ipairs(updates) do
- preview_update(update) end return nil else return nil end end return cache({handler = _5_}) end
+
+
+
+ apply_update(update) end return nil else return nil end end return cache({handler = _5_}) end
 
  return {setup = setup}

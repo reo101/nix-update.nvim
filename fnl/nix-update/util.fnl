@@ -94,27 +94,29 @@
   {:__call
    (fn [self args]
      ;;; Check for missing keys
-     (let [missing (missing-keys args self.required-keys)]
-       (when (> (length missing) 0)
-         (vim.notify
-           (string.format
-             "Missing keys: %s"
-             (vim.inspect
-               missing)))
-         (lua "return nil")))
+     (when self.required-keys
+       (let [missing (missing-keys args self.required-keys)]
+         (when (> (length missing) 0)
+           (vim.notify
+             (string.format
+               "Missing keys: %s"
+               (vim.inspect
+                 missing)))
+           (lua "return nil"))))
 
      ;;; Check for missing cmds
-     (let [missing (filter #(= (vim.fn.executable $.v) 0) self.required-cmds)]
-       (when (> (length missing) 0)
-         (vim.notify
-           (string.format
-             "Missing commands: %s"
-             (vim.inspect
-               missing)))
-         (lua "return nil")))
+     (when self.required-cmds
+       (let [missing (filter #(= (vim.fn.executable $.v) 0) self.required-cmds)]
+         (when (> (length missing) 0)
+           (vim.notify
+             (string.format
+               "Missing commands: %s"
+               (vim.inspect
+                 missing)))
+           (lua "return nil"))))
 
-     ;;; Finally, safely call prefetch function
-     (self.prefetch args))})
+     ;;; Finally, safely call the prefetcher function
+     (self.prefetcher args))})
 
 ;;; Define helper to run async commands using libuv
 (fn call-command [{: cmd : args} callback]

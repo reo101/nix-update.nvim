@@ -30,7 +30,16 @@
 
 
 
- local prefetcher_cmds
+
+
+
+
+
+
+
+
+ local prefetchers
+
 
 
 
@@ -48,19 +57,29 @@
 
 
 
- local function _8_() local _6_ do local t_5_ = _3ffetchSubmodules if (nil ~= t_5_) then t_5_ = (t_5_).value else end _6_ = t_5_ end if (_6_ == "true") then
- return {"--fetchSubmodules"} else
- return {} end end args = concat_two(concat_two(concat_two(concat_two(concat_two({}, {"fetchFromGitHub"}), {"--owner", owner}), {"--repo", repo}), {"--rev", rev}), _8_())
+
+
+ local function _5_() if (_3ffetchSubmodules == "true") then
+ return {"--fetch-submodules"} else
+ return {} end end args = concat_two(concat_two(concat_two(concat_two({}, {"--quiet"}), {"--url", string.format("https://www.github.com/%s/%s", owner, repo)}), {"--rev", rev}), _5_())
 
  return {cmd = cmd, args = args} end
 
 
 
+ local function _6_(stdout)
+ return {sha256 = vim.json.decode(table.concat(stdout)).sha256} end
 
 
 
 
- local function _11_(_9_) local _arg_10_ = _9_
+
+
+
+
+
+
+ local function _9_(_7_) local _arg_8_ = _7_
  local cmd = nil
 
  local args = nil
@@ -70,6 +89,8 @@
  return {cmd = cmd, args = args} end
 
 
+ local function _10_(stdout)
+ return {} end
 
 
 
@@ -77,16 +98,17 @@
 
 
 
- local function _14_(_12_) local _arg_13_ = _12_ local owner = _arg_13_["owner"]
- local repo = _arg_13_["repo"]
- local rev = _arg_13_["rev"]
- local _3ffetchSubmodules = _arg_13_["?fetchSubmodules"] local cmd = "nix-prefetch-git"
+
+ local function _13_(_11_) local _arg_12_ = _11_ local owner = _arg_12_["owner"]
+ local repo = _arg_12_["repo"]
+ local rev = _arg_12_["rev"]
+ local _3ffetchSubmodules = _arg_12_["?fetchSubmodules"] local cmd = "nix-prefetch-git"
 
 
  local args
- local function _18_() local _16_ do local t_15_ = _3ffetchSubmodules if (nil ~= t_15_) then t_15_ = (t_15_).value else end _16_ = t_15_ end if (_16_ == "true") then
+ local function _17_() local _15_ do local t_14_ = _3ffetchSubmodules if (nil ~= t_14_) then t_14_ = (t_14_).value else end _15_ = t_14_ end if (_15_ == "true") then
  return {"--fetch-submodules"} else
- return {} end end args = concat_two(concat_two(concat_two({}, {"--no-deepClone"}), _18_()), {"--quiet", string.format("https://github.com/%s/%s.git", owner, repo), rev})
+ return {} end end args = concat_two(concat_two(concat_two({}, {"--no-deepClone"}), _17_()), {"--quiet", string.format("https://github.com/%s/%s.git", owner, repo), rev})
 
 
 
@@ -94,22 +116,14 @@
 
 
 
+ return {cmd = cmd, args = args} end
 
 
+ local function _18_(stdout)
+ return {} end prefetchers = {fetchFromGitHub = {["required-cmds"] = {"nix-prefetch-git"}, ["required-keys"] = {"owner", "repo", "rev"}, prefetcher = _4_, extractor = _6_}, buildRustPackage = {["required-cmds"] = {}, ["required-keys"] = {}, prefetcher = _9_, extractor = _10_}, fetchgit = {["required-cmds"] = {}, ["required-keys"] = {"owner", "repo", "rev"}, prefetcher = _13_, extractor = _18_}}
 
 
- return {cmd = cmd, args = args} end prefetcher_cmds = {fetchFromGitHub = {["required-cmds"] = {"nix-prefetch"}, ["required-keys"] = {"owner", "repo", "rev"}, prefetch = _4_}, buildRustPackage = {["required-cmds"] = {}, ["required-keys"] = {}, prefetch = _11_}, fetchgit = {["required-cmds"] = {}, ["required-keys"] = {"owner", "repo", "rev"}, prefetch = _14_}}
-
-
-
- local prefetcher_extractors
-
-
- local function _19_(stdout)
- return {sha256 = stdout[1]} end prefetcher_extractors = {fetchFromGitHub = _19_}
-
-
- for _, prefetcher in pairs(prefetcher_cmds) do
+ for _, prefetcher in pairs(prefetchers) do
  setmetatable(prefetcher, prefetcher_cmd_mt) end
 
- return {["prefetcher-cmds"] = prefetcher_cmds, ["prefetcher-extractors"] = prefetcher_extractors}
+ return {prefetchers = prefetchers}

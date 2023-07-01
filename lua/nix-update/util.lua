@@ -94,30 +94,32 @@
 
  local function _20_(self, args)
 
- do local missing = missing_keys(args, self["required-keys"])
+ if self["required-keys"] then
+ local missing = missing_keys(args, self["required-keys"])
  if (#missing > 0) then
  vim.notify(string.format("Missing keys: %s", vim.inspect(missing)))
 
 
 
 
- return nil else end end
+ return nil else end else end
 
 
- do local missing local function _22_(_241) return (vim.fn.executable(_241.v) == 0) end missing = filter(_22_, self["required-cmds"])
+ if self["required-cmds"] then
+ local missing local function _23_(_241) return (vim.fn.executable(_241.v) == 0) end missing = filter(_23_, self["required-cmds"])
  if (#missing > 0) then
  vim.notify(string.format("Missing commands: %s", vim.inspect(missing)))
 
 
 
 
- return nil else end end
+ return nil else end else end
 
 
- return self.prefetch(args) end prefetcher_cmd_mt = {__call = _20_}
+ return self.prefetcher(args) end prefetcher_cmd_mt = {__call = _20_}
 
 
- local function call_command(_24_, callback) local _arg_25_ = _24_ local cmd = _arg_25_["cmd"] local args = _arg_25_["args"]
+ local function call_command(_26_, callback) local _arg_27_ = _26_ local cmd = _arg_27_["cmd"] local args = _arg_27_["args"]
 
  local stdout = uv.new_pipe()
  local stderr = uv.new_pipe()
@@ -134,21 +136,21 @@
 
 
 
- local on_exit local function _26_(_status)
+ local on_exit local function _28_(_status)
  for _, pipe in ipairs({stdout, stderr}) do
  uv.read_stop(pipe)
  uv.close(pipe) end
  uv.close(handle)
- local function _27_() return callback(result) end return vim.schedule(_27_) end on_exit = _26_
+ local function _29_() return callback(result) end return vim.schedule(_29_) end on_exit = _28_
 
 
- local on_read local function _28_(pipe)
- local function _29_(_status, data)
+ local on_read local function _30_(pipe)
+ local function _31_(_status, data)
  if data then
  local vals = vim.split(data, "\n")
  for _, val in ipairs(vals) do
  if (val ~= "") then
- table.insert(result[pipe], val) else end end return nil else return nil end end return _29_ end on_read = _28_
+ table.insert(result[pipe], val) else end end return nil else return nil end end return _31_ end on_read = _30_
 
 
  handle = uv.spawn(cmd, options, on_exit)

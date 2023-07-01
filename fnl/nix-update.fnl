@@ -59,15 +59,19 @@
                   : data
                   : err}
                  value)
-          (when (and err
-                     (= (length (or data [])) 0))
-            (vim.print "Opa")
+          (when (and (= (length (or data [])) 0)
+                     err)
+            (vim.notify "Could not prefetch")
+            (vim.print {: data : err})
             (lua "return"))
           (local updates (calculate-updates
                            {: bufnr
                             : fetch
                             :new-data data}))
           (each [_ update (ipairs updates)]
-            (preview-update update))))}))
+            ;;; TODO: fix preview-update (conceal/anticonceal)
+            ;;
+            ;; (preview-update update)
+            (apply-update update))))}))
 
 {: setup}

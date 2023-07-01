@@ -1,5 +1,4 @@
-(local {: prefetcher-cmds
-        : prefetcher-extractors}
+(local {: prefetchers}
        (require :nix-update.prefetchers))
 
 (local {: cache}
@@ -51,7 +50,7 @@
 (fn gen-fetches-names []
   (..
     (table.concat
-      (icollect [fetch _ (pairs prefetcher-cmds)]
+      (icollect [fetch _ (pairs prefetchers)]
         (string.format "\"%s\"" fetch))
       " ")
     " "
@@ -681,8 +680,8 @@
   ;;; Get correct prefetcher cmd generator
   (local prefetcher
          ;;; NOTE: referencing user-defined cmds
-         (or (?. config :extra-prefetcher-cmds fetch._fname)
-             (?. prefetcher-cmds               fetch._fname)))
+         (or (?. config :extra-prefetchers fetch._fname)
+             (?. prefetchers               fetch._fname)))
 
   ;;; Early return if not found
   (when (not prefetcher)
@@ -737,20 +736,6 @@
         fetch._fname))
     (lua "return"))
 
-  ;;; Get correct prefetcher result extractor
-  (local prefetcher-extractor
-         ;;; NOTE: referencing user-defined extractors
-         (or (?. config :extra-prefetcher-extractors fetch._fname)
-             (?. prefetcher-extractors               fetch._fname)))
-
-  ;;; Early return if not found
-  (when (not prefetcher-extractor)
-    (vim.notify
-      (string.format
-        "No data extractor for the prefetcher '%s' found"
-        fetch._fname))
-    (lua "return"))
-
   ;;; Call the command (will see results through `sed`)
   (call-command
     prefetcher-cmd
@@ -772,7 +757,7 @@
         fetch._fwhole
         {: bufnr
          : fetch
-         :data (prefetcher-extractor stdout)})))
+         :data (prefetcher.extractor stdout)})))
 
   ;;; Notify user that we are now waiting
   (vim.notify

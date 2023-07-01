@@ -1,5 +1,4 @@
- local _local_1_ = require("nix-update.prefetchers") local prefetcher_cmds = _local_1_["prefetcher-cmds"]
- local prefetcher_extractors = _local_1_["prefetcher-extractors"]
+ local _local_1_ = require("nix-update.prefetchers") local prefetchers = _local_1_["prefetchers"]
 
 
  local _local_2_ = require("nix-update._cache") local cache = _local_2_["cache"]
@@ -51,7 +50,7 @@
  local function gen_fetches_names()
 
 
- local _5_ do local tbl_17_auto = {} local i_18_auto = #tbl_17_auto for fetch, _ in pairs(prefetcher_cmds) do
+ local _5_ do local tbl_17_auto = {} local i_18_auto = #tbl_17_auto for fetch, _ in pairs(prefetchers) do
  local val_19_auto = string.format("\"%s\"", fetch) if (nil ~= val_19_auto) then i_18_auto = (i_18_auto + 1) do end (tbl_17_auto)[i_18_auto] = val_19_auto else end end _5_ = tbl_17_auto end
 
 
@@ -681,8 +680,8 @@
 
  local prefetcher local function _100_()
 
- local t_101_ = config if (nil ~= t_101_) then t_101_ = (t_101_)["extra-prefetcher-cmds"] else end if (nil ~= t_101_) then t_101_ = (t_101_)[fetch0._fname] else end return t_101_ end local function _104_()
- local t_105_ = prefetcher_cmds if (nil ~= t_105_) then t_105_ = (t_105_)[fetch0._fname] else end return t_105_ end prefetcher = (_100_() or _104_())
+ local t_101_ = config if (nil ~= t_101_) then t_101_ = (t_101_)["extra-prefetchers"] else end if (nil ~= t_101_) then t_101_ = (t_101_)[fetch0._fname] else end return t_101_ end local function _104_()
+ local t_105_ = prefetchers if (nil ~= t_105_) then t_105_ = (t_105_)[fetch0._fname] else end return t_105_ end prefetcher = (_100_() or _104_())
 
 
  if not prefetcher then
@@ -738,23 +737,9 @@
  return else end
 
 
- local prefetcher_extractor local function _114_()
-
- local t_115_ = config if (nil ~= t_115_) then t_115_ = (t_115_)["extra-prefetcher-extractors"] else end if (nil ~= t_115_) then t_115_ = (t_115_)[fetch0._fname] else end return t_115_ end local function _118_()
- local t_119_ = prefetcher_extractors if (nil ~= t_119_) then t_119_ = (t_119_)[fetch0._fname] else end return t_119_ end prefetcher_extractor = (_114_() or _118_())
 
 
- if not prefetcher_extractor then
- vim.notify(string.format("No data extractor for the prefetcher '%s' found", fetch0._fname))
-
-
-
- return else end
-
-
-
-
- local function _124_(_122_) local _arg_123_ = _122_ local stdout = _arg_123_["stdout"] local stderr = _arg_123_["stderr"]
+ local function _116_(_114_) local _arg_115_ = _114_ local stdout = _arg_115_["stdout"] local stderr = _arg_115_["stderr"]
  if (#stdout == 0) then
  cache[fetch0._fwhole] = {bufnr = bufnr0, fetch = fetch0, err = string.format("Oopsie: %s", vim.inspect(stderr))}
 
@@ -767,7 +752,7 @@
 
  return else end
 
- cache[fetch0._fwhole] = {bufnr = bufnr0, fetch = fetch0, data = prefetcher_extractor(stdout)} return nil end call_command(prefetcher_cmd, _124_)
+ cache[fetch0._fwhole] = {bufnr = bufnr0, fetch = fetch0, data = prefetcher.extractor(stdout)} return nil end call_command(prefetcher_cmd, _116_)
 
 
 

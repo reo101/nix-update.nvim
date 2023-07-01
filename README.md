@@ -60,7 +60,7 @@ local opts = {
       -- (array of strings) Array of required "fetch" keys
       ["required-keys"] = { "repo", "user" },
       -- (function) Function to run to generate a command
-      ["prefetch"] = function(opts)
+      ["prefetcher"] = function(opts)
         -- guaranteed to be non-nil
         local repo = opts.repo
         local user = opts.user
@@ -78,26 +78,23 @@ local opts = {
           },
         }
       end,
+      -- (function) Function to run to extract the new data
+      ["extractor"] = function(stdout)
+        -- array of lines from funning the corresponding command
+        local first_line = stdout[1]
+
+        -- has to return a table with new value for the keys
+        return {
+          version = "v." .. first_line
+        }
+      end,
     },
   },
-  -- Extra prefetcher extractors
-  -- array of functions, where each one looks like this:
-  extra_prefetcher_extractors = {
-    ["myFetch"] = function(stdout)
-      -- array of lines from funning the corresponding command
-      local first_line = stdout[1]
-
-      -- has to return a table with new value for the keys
-      return {
-        version = "v." .. first_line
-      }
-    end,
-  },
-}
 ```
 
 **NOTES:**
-- Both tables are empty by default
+- The table is empty by default
+- `required-cmds` and `required-keys` are optional
 - You can override the builtin definitions by using the same name in `extra`
 
 ## Usage
