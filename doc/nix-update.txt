@@ -1,4 +1,4 @@
-*nix-update.txt*           For NVIM v0.8.0           Last change: 2023 July 01
+*nix-update.txt*           For NVIM v0.8.0           Last change: 2023 July 04
 
 ==============================================================================
 Table of Contents                               *nix-update-table-of-contents*
@@ -31,8 +31,7 @@ LAZY.NVIM
         }
         config = function()
             require("nix-update").setup({
-                extra_prefetcher_cmds = {},
-                extra_prefetcher_extractors = {},
+                extra_prefetchers = {},
             })
         end,
     }
