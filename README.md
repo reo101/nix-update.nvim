@@ -33,8 +33,7 @@ Dynamically and asynchronously update attributes of *fetch-like* constructions i
     }
     config = function()
         require("nix-update").setup({
-            extra_prefetcher_cmds = {},
-            extra_prefetcher_extractors = {},
+            extra_prefetchers = {},
         })
     end,
 }

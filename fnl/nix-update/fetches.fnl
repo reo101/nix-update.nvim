@@ -12,7 +12,7 @@
         : find-child
         : coords
         : call-command}
-       (require :nix-update.util))
+       (require :nix-update.utils))
 
 (macro -m> [val ...]
   "Thread a value through a list of method calls"
@@ -55,7 +55,7 @@
       " ")
     " "
     (table.concat
-      (icollect [fetch _ (pairs ((?. config :extra-prefetcher-cmds)))]
+      (icollect [fetch _ (pairs ((?. config :extra-prefetchers)))]
         (string.format "\"%s\"" fetch))
       " ")))
 
@@ -246,11 +246,14 @@
     (var parent-bounder (-m> bounder
                              [:parent]
                              [:parent]))
+
     ;; (var parent-bounder (: (: bounder :parent) :parent))
     (while (and parent-bounder
                 (not= (parent-bounder:type) "rec_attrset_expression")
                 (not= (parent-bounder:type) "let_expression"))
       (set parent-bounder (parent-bounder:parent)))
+
+    ;;; FIXME: empty let expressions have no binding_set
 
     ;;; If found, step down into its binding_set
     (when parent-bounder

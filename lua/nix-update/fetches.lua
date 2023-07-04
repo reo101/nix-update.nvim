@@ -7,7 +7,7 @@
  local _local_3_ = require("nix-update._config") local config = _local_3_["config"]
 
 
- local _local_4_ = require("nix-update.util") local imap = _local_4_["imap"]
+ local _local_4_ = require("nix-update.utils") local imap = _local_4_["imap"]
  local flatten = _local_4_["flatten"]
  local find_child = _local_4_["find-child"]
  local coords = _local_4_["coords"]
@@ -55,7 +55,7 @@
 
 
 
- local _7_ do local tbl_17_auto = {} local i_18_auto = #tbl_17_auto local _9_ do local t_8_ = config if (nil ~= t_8_) then t_8_ = (t_8_)["extra-prefetcher-cmds"] else end _9_ = t_8_ end for fetch, _ in pairs(_9_()) do
+ local _7_ do local tbl_17_auto = {} local i_18_auto = #tbl_17_auto local _9_ do local t_8_ = config if (nil ~= t_8_) then t_8_ = (t_8_)["extra-prefetchers"] else end _9_ = t_8_ end for fetch, _ in pairs(_9_()) do
  local val_19_auto = string.format("\"%s\"", fetch) if (nil ~= val_19_auto) then i_18_auto = (i_18_auto + 1) do end (tbl_17_auto)[i_18_auto] = val_19_auto else end end _7_ = tbl_17_auto end return (table.concat(_5_, " ") .. " " .. table.concat(_7_, " ")) end
 
 
@@ -247,7 +247,10 @@
 
 
 
+
  while (parent_bounder and (parent_bounder:type() ~= "rec_attrset_expression") and (parent_bounder:type() ~= "let_expression")) do parent_bounder = parent_bounder:parent() end
+
+
 
 
 

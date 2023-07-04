@@ -1,5 +1,5 @@
- local _local_1_ = require("nix-update.util") local concat_two = _local_1_["concat-two"]
- local prefetcher_cmd_mt = _local_1_["prefetcher-cmd-mt"]
+ local _local_1_ = require("nix-update.utils") local concat_two = _local_1_["concat-two"]
+ local prefetcher_mt = _local_1_["prefetcher-mt"]
 
 
 
@@ -20,6 +20,18 @@
 
 
 
+
+
+ local nix_prefetch_git_sha256_extractor
+ local function _2_(stdout)
+ local sha256 = string.gsub(vim.fn.system(string.format("nix hash to-sri \"sha256:%s\"", vim.json.decode(table.concat(stdout)).sha256)), "\n", "")
+
+
+
+
+
+
+ return {sha256 = sha256} end nix_prefetch_git_sha256_extractor = _2_
 
 
 
@@ -47,10 +59,10 @@
 
 
 
- local function _4_(_2_) local _arg_3_ = _2_ local owner = _arg_3_["owner"]
- local repo = _arg_3_["repo"]
- local rev = _arg_3_["rev"]
- local _3ffetchSubmodules = _arg_3_["?fetchSubmodules"] local cmd = "nix-prefetch"
+ local function _5_(_3_) local _arg_4_ = _3_ local owner = _arg_4_["owner"]
+ local repo = _arg_4_["repo"]
+ local rev = _arg_4_["rev"]
+ local _3ffetchSubmodules = _arg_4_["?fetchSubmodules"] local cmd = "nix"
 
 
  local args
@@ -59,16 +71,18 @@
 
 
 
- local function _5_() if (_3ffetchSubmodules == "true") then
+
+
+
+
+ local function _6_() if (_3ffetchSubmodules == "true") then
  return {"--fetch-submodules"} else
- return {} end end args = concat_two(concat_two(concat_two(concat_two({}, {"--quiet"}), {"--url", string.format("https://www.github.com/%s/%s", owner, repo)}), {"--rev", rev}), _5_())
+ return {} end end args = concat_two(concat_two(concat_two(concat_two(concat_two(concat_two(concat_two(concat_two({}, {"run"}), {"nixpkgs#nix-prefetch-git"}), {"--"}), {"--no-deepClone"}), {"--quiet"}), {"--url", string.format("https://www.github.com/%s/%s", owner, repo)}), {"--rev", rev}), _6_())
 
  return {cmd = cmd, args = args} end
 
 
 
- local function _6_(stdout)
- return {sha256 = vim.json.decode(table.concat(stdout)).sha256} end
 
 
 
@@ -76,54 +90,28 @@
 
 
 
-
-
-
- local function _9_(_7_) local _arg_8_ = _7_
- local cmd = nil
-
- local args = nil
-
-
-
- return {cmd = cmd, args = args} end
-
-
- local function _10_(stdout)
- return {} end
-
-
-
-
-
-
-
-
- local function _13_(_11_) local _arg_12_ = _11_ local owner = _arg_12_["owner"]
- local repo = _arg_12_["repo"]
- local rev = _arg_12_["rev"]
- local _3ffetchSubmodules = _arg_12_["?fetchSubmodules"] local cmd = "nix-prefetch-git"
+ local function _9_(_7_) local _arg_8_ = _7_ local url = _arg_8_["url"]
+ local rev = _arg_8_["rev"]
+ local _3ffetchSubmodules = _arg_8_["?fetchSubmodules"] local cmd = "nix-prefetch-git"
 
 
  local args
- local function _17_() local _15_ do local t_14_ = _3ffetchSubmodules if (nil ~= t_14_) then t_14_ = (t_14_).value else end _15_ = t_14_ end if (_15_ == "true") then
+
+
+
+
+
+
+ local function _10_() if (_3ffetchSubmodules == "true") then
  return {"--fetch-submodules"} else
- return {} end end args = concat_two(concat_two(concat_two({}, {"--no-deepClone"}), _17_()), {"--quiet", string.format("https://github.com/%s/%s.git", owner, repo), rev})
+ return {} end end args = concat_two(concat_two(concat_two(concat_two(concat_two(concat_two(concat_two(concat_two({}, {"run"}), {"nixpkgs#nix-prefetch-git"}), {"--"}), {"--no-deepClone"}), {"--quiet"}), {"--url", url}), {"--rev", rev}), _10_())
+
+ return {cmd = cmd, args = args} end prefetchers = {fetchFromGitHub = {["required-cmds"] = {"nix"}, ["required-keys"] = {"owner", "repo", "rev"}, prefetcher = _5_, extractor = nix_prefetch_git_sha256_extractor}, fetchgit = {["required-cmds"] = {"nix"}, ["required-keys"] = {"url", "rev"}, prefetcher = _9_, extractor = nix_prefetch_git_sha256_extractor}}
 
 
-
-
-
-
-
- return {cmd = cmd, args = args} end
-
-
- local function _18_(stdout)
- return {} end prefetchers = {fetchFromGitHub = {["required-cmds"] = {"nix-prefetch-git"}, ["required-keys"] = {"owner", "repo", "rev"}, prefetcher = _4_, extractor = _6_}, buildRustPackage = {["required-cmds"] = {}, ["required-keys"] = {}, prefetcher = _9_, extractor = _10_}, fetchgit = {["required-cmds"] = {}, ["required-keys"] = {"owner", "repo", "rev"}, prefetcher = _13_, extractor = _18_}}
 
 
  for _, prefetcher in pairs(prefetchers) do
- setmetatable(prefetcher, prefetcher_cmd_mt) end
+ setmetatable(prefetcher, prefetcher_mt) end
 
  return {prefetchers = prefetchers}

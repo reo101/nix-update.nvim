@@ -5,13 +5,9 @@
  local _local_2_ = require("nix-update._cache") local cache = _local_2_["cache"]
 
 
- local _local_3_ = require("nix-update.util") local coords = _local_3_["coords"]
+ local _local_3_ = require("nix-update.utils") local coords = _local_3_["coords"]
+ local concat_two = _local_3_["concat-two"]
 
-
- local function concat_two(xss, yss)
- for _, ys in ipairs(yss) do
- table.insert(xss, ys) end
- return xss end
 
  local function set_diagnostic(opts)
 

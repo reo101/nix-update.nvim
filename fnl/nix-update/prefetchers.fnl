@@ -1,6 +1,6 @@
 (local {: concat-two
-        : prefetcher-cmd-mt}
-       (require :nix-update.util))
+        : prefetcher-mt}
+       (require :nix-update.utils))
 
 (macro concat [...]
   (fn all [p? tbl]
@@ -11,6 +11,7 @@
 
   (var res [])
 
+  ;;; TODO: compile-time concat all clumped chunks
   (if (all #(table? $2) [...])
       (each [_ xs (ipairs [...])]
         (each [_ x (ipairs xs)]
@@ -20,6 +21,17 @@
         (set res (list `concat-two res xs))))
 
   res)
+
+(local nix-prefetch-git-sha256-extractor
+       (fn [stdout]
+         (let [sha256 (-> stdout
+                          (table.concat)
+                          (vim.json.decode)
+                          (. :sha256)
+                          (->> (string.format "nix hash to-sri \"sha256:%s\""))
+                          (vim.fn.system)
+                          (string.gsub "\n" ""))]
+           {: sha256})))
 
 ;; TODO:
 ;; fetchFromGitLab
@@ -41,7 +53,7 @@
 (local prefetchers
   {;; Github
    :fetchFromGitHub
-   {:required-cmds [:nix-prefetch-git]
+   {:required-cmds [:nix]
     :required-keys [:owner
                     :repo
                     :rev]
@@ -51,79 +63,55 @@
            : repo
            : rev
            : ?fetchSubmodules}]
-       (local cmd "nix-prefetch")
+       (local cmd "nix")
 
-       (local args (concat ["--quiet"]
+       (local args (concat ["run"]
+                           ["nixpkgs#nix-prefetch-git"]
+                           ["--"]
+                           ["--no-deepClone"]
+                           ["--quiet"]
                            ["--url" (string.format
                                       "https://www.github.com/%s/%s"
                                       owner
                                       repo)]
                            ["--rev" rev]
                            (if (= ?fetchSubmodules :true)
-                               ["--fetch-submodules"]
-                               [])))
+                             ["--fetch-submodules"]
+                             [])))
 
        {: cmd
         : args})
     ;; (cmd result -> new fields)
-    :extractor
-     (fn [stdout]
-      {:sha256
-        (-> stdout
-            (table.concat)
-            (vim.json.decode)
-            (. :sha256))})}
-
-   ;; Fetch Cargo
-   :buildRustPackage
-   {:required-cmds []
-    :required-keys []
-    :prefetcher
-     (fn [{}]
-       (local cmd nil)
-
-       (local args nil)
-
-       ;; nix-prefetch '{ sha256 }: i3status-rust.cargoDeps.overrideAttrs (_: { cargoSha256 = sha256; })'
-
-       {: cmd
-        : args})
-    :extractor
-     (fn [stdout]
-       {})}
+    :extractor nix-prefetch-git-sha256-extractor}
 
    ;; Fetch GIT
    :fetchgit
-   {:required-cmds []
-    :required-keys [:owner
-                    :repo
+   {:required-cmds [:nix]
+    :required-keys [:url
                     :rev]
     :prefetcher
-     (fn [{: owner
-           : repo
+     (fn [{: url
            : rev
            : ?fetchSubmodules}]
        (local cmd "nix-prefetch-git")
 
-       (local args (concat ["--no-deepClone"]
-                           (if (= (?. ?fetchSubmodules :value) :true)
+       (local args (concat ["run"]
+                           ["nixpkgs#nix-prefetch-git"]
+                           ["--"]
+                           ["--no-deepClone"]
+                           ["--quiet"]
+                           ["--url" url]
+                           ["--rev" rev]
+                           (if (= ?fetchSubmodules :true)
                              ["--fetch-submodules"]
-                             [])
-                           ["--quiet"
-                            (string.format
-                              "https://github.com/%s/%s.git"
-                              owner
-                              repo)
-                            rev]))
+                             [])))
 
        {: cmd
         : args})
-    :extractor
-     (fn [stdout]
-       {})}})
+    :extractor nix-prefetch-git-sha256-extractor}})
 
-;;; Make all gen-prefetcher-cmd tables callable (for common error handling)
+;;; Make all prefetchers (tables) callable (for common error handling)
 (each [_ prefetcher (pairs prefetchers)]
-  (setmetatable prefetcher prefetcher-cmd-mt))
+  (setmetatable prefetcher prefetcher-mt))
 
 {: prefetchers}

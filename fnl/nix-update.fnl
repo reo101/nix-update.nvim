@@ -45,8 +45,7 @@
   ;;; Save user options in global config
   (save-options
     opts
-    [:extra-prefetcher-cmds
-     :extra-prefetcher-extractors])
+    [:extra-prefetchers])
 
   ;;; Set cache `on-index` handler
   (cache

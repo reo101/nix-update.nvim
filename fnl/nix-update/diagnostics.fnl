@@ -5,13 +5,9 @@
 (local {: cache}
        (require :nix-update._cache))
 
-(local {: coords}
-       (require "nix-update.util"))
-
-(fn concat-two [xss yss]
-  (each [_ ys (ipairs yss)]
-    (table.insert xss ys))
-  xss)
+(local {: coords
+        : concat-two}
+       (require "nix-update.utils"))
 
 (fn set-diagnostic [opts]
   ;;; Extract opts
