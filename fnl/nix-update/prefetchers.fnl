@@ -33,17 +33,15 @@
                           (string.gsub "\n" ""))]
            {: sha256})))
 
-;; TODO:
-;; fetchFromGitLab
-;; fetchgit
-;; fetchurl
-;; fetchzip
-;; compileEmacsWikiFile
-;; fetchPypi
+(local nix-prefetch-url-sha256-extractor
+       (fn [stdout]
+         (let [sha256 (-> stdout
+                          (table.concat)
+                          (vim.json.decode)
+                          (. :hash))]
+           {: sha256})))
 
-;;; Define the fetchers'
-;;;  (args -> cmd)
-;;; Define the pre-fetchers' response extractors (cmd result -> new fields)
+;;; Define the prefetchers for each supported fetch
 ;;; {
 ;;;   :required-cmds ;; Required programs to be on $PATH
 ;;;   :required-keys ;; Required keys to be passed in
@@ -51,7 +49,7 @@
 ;;;   :extracter     ;; Extract the new value(s) from the prefetch result
 ;;; }
 (local prefetchers
-  {;; Github
+  {;; GitHub
    :fetchFromGitHub
    {:required-cmds [:nix]
     :required-keys [:owner
@@ -84,6 +82,75 @@
     ;; (cmd result -> new fields)
     :extractor nix-prefetch-git-sha256-extractor}
 
+   ;; GitLab
+   :fetchFromGitLab
+   {:required-cmds [:nix]
+    :required-keys [:owner
+                    :repo
+                    :rev]
+    ;; (args -> cmd)
+    :prefetcher
+     (fn [{: owner
+           : repo
+           : rev
+           : ?fetchSubmodules}]
+       (local cmd "nix")
+
+       (local args (concat ["run"]
+                           ["nixpkgs#nix-prefetch-git"]
+                           ["--"]
+                           ["--no-deepClone"]
+                           ["--quiet"]
+                           ["--url" (string.format
+                                      "https://www.gitlab.com/%s/%s"
+                                      owner
+                                      repo)]
+                           ["--rev" rev]
+                           (if (= ?fetchSubmodules :true)
+                             ["--fetch-submodules"]
+                             [])))
+
+       {: cmd
+        : args})
+    ;; (cmd result -> new fields)
+    :extractor nix-prefetch-git-sha256-extractor}
+
+   ;; Fetch URL
+   :fetchurl
+   {:required-cmds [:nix]
+    :required-keys [:url]
+    :prefetcher
+     (fn [{: url}]
+       (local cmd "nix")
+
+       (local args (concat ["store"]
+                           ["prefetch-file"]
+                           ["--json"]
+                           ["--hash-type" "sha256"]
+                           [url]))
+
+       {: cmd
+        : args})
+    :extractor nix-prefetch-url-sha256-extractor}
+
+   ;; Fetch patch
+   :fetchpatch
+   {:required-cmds [:nix]
+    :required-keys [:url]
+    :prefetcher
+     (fn [{: url}]
+       (local cmd "nix")
+
+       (local args (concat ["store"]
+                           ["prefetch-file"]
+                           ["--json"]
+                           ["--hash-type" "sha256"]
+                           [url]))
+
+       {: cmd
+        : args})
+    :extractor nix-prefetch-url-sha256-extractor}
+
    ;; Fetch GIT
    :fetchgit
    {:required-cmds [:nix]
@@ -93,7 +160,7 @@
      (fn [{: url
            : rev
            : ?fetchSubmodules}]
-       (local cmd "nix-prefetch-git")
+       (local cmd "nix")
 
        (local args (concat ["run"]
                            ["nixpkgs#nix-prefetch-git"]

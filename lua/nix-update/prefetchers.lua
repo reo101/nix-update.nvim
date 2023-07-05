@@ -33,15 +33,13 @@
 
  return {sha256 = sha256} end nix_prefetch_git_sha256_extractor = _2_
 
+ local nix_prefetch_url_sha256_extractor
+ local function _3_(stdout)
+ local sha256 = vim.json.decode(table.concat(stdout)).hash
 
 
 
-
-
-
-
-
-
+ return {sha256 = sha256} end nix_prefetch_url_sha256_extractor = _3_
 
 
 
@@ -59,10 +57,10 @@
 
 
 
- local function _5_(_3_) local _arg_4_ = _3_ local owner = _arg_4_["owner"]
- local repo = _arg_4_["repo"]
- local rev = _arg_4_["rev"]
- local _3ffetchSubmodules = _arg_4_["?fetchSubmodules"] local cmd = "nix"
+ local function _6_(_4_) local _arg_5_ = _4_ local owner = _arg_5_["owner"]
+ local repo = _arg_5_["repo"]
+ local rev = _arg_5_["rev"]
+ local _3ffetchSubmodules = _arg_5_["?fetchSubmodules"] local cmd = "nix"
 
 
  local args
@@ -75,9 +73,9 @@
 
 
 
- local function _6_() if (_3ffetchSubmodules == "true") then
+ local function _7_() if (_3ffetchSubmodules == "true") then
  return {"--fetch-submodules"} else
- return {} end end args = concat_two(concat_two(concat_two(concat_two(concat_two(concat_two(concat_two(concat_two({}, {"run"}), {"nixpkgs#nix-prefetch-git"}), {"--"}), {"--no-deepClone"}), {"--quiet"}), {"--url", string.format("https://www.github.com/%s/%s", owner, repo)}), {"--rev", rev}), _6_())
+ return {} end end args = concat_two(concat_two(concat_two(concat_two(concat_two(concat_two(concat_two(concat_two({}, {"run"}), {"nixpkgs#nix-prefetch-git"}), {"--"}), {"--no-deepClone"}), {"--quiet"}), {"--url", string.format("https://www.github.com/%s/%s", owner, repo)}), {"--rev", rev}), _7_())
 
  return {cmd = cmd, args = args} end
 
@@ -90,9 +88,12 @@
 
 
 
- local function _9_(_7_) local _arg_8_ = _7_ local url = _arg_8_["url"]
- local rev = _arg_8_["rev"]
- local _3ffetchSubmodules = _arg_8_["?fetchSubmodules"] local cmd = "nix-prefetch-git"
+
+
+ local function _10_(_8_) local _arg_9_ = _8_ local owner = _arg_9_["owner"]
+ local repo = _arg_9_["repo"]
+ local rev = _arg_9_["rev"]
+ local _3ffetchSubmodules = _arg_9_["?fetchSubmodules"] local cmd = "nix"
 
 
  local args
@@ -102,11 +103,77 @@
 
 
 
- local function _10_() if (_3ffetchSubmodules == "true") then
- return {"--fetch-submodules"} else
- return {} end end args = concat_two(concat_two(concat_two(concat_two(concat_two(concat_two(concat_two(concat_two({}, {"run"}), {"nixpkgs#nix-prefetch-git"}), {"--"}), {"--no-deepClone"}), {"--quiet"}), {"--url", url}), {"--rev", rev}), _10_())
 
- return {cmd = cmd, args = args} end prefetchers = {fetchFromGitHub = {["required-cmds"] = {"nix"}, ["required-keys"] = {"owner", "repo", "rev"}, prefetcher = _5_, extractor = nix_prefetch_git_sha256_extractor}, fetchgit = {["required-cmds"] = {"nix"}, ["required-keys"] = {"url", "rev"}, prefetcher = _9_, extractor = nix_prefetch_git_sha256_extractor}}
+
+
+ local function _11_() if (_3ffetchSubmodules == "true") then
+ return {"--fetch-submodules"} else
+ return {} end end args = concat_two(concat_two(concat_two(concat_two(concat_two(concat_two(concat_two(concat_two({}, {"run"}), {"nixpkgs#nix-prefetch-git"}), {"--"}), {"--no-deepClone"}), {"--quiet"}), {"--url", string.format("https://www.gitlab.com/%s/%s", owner, repo)}), {"--rev", rev}), _11_())
+
+ return {cmd = cmd, args = args} end
+
+
+
+
+
+
+
+
+
+ local function _14_(_12_) local _arg_13_ = _12_ local url = _arg_13_["url"] local cmd = "nix" local args = {"store", "prefetch-file", "--json", "--hash-type", "sha256", url}
+
+
+
+
+
+
+
+
+ return {cmd = cmd, args = args} end
+
+
+
+
+
+
+
+
+ local function _17_(_15_) local _arg_16_ = _15_ local url = _arg_16_["url"] local cmd = "nix" local args = {"store", "prefetch-file", "--json", "--hash-type", "sha256", url}
+
+
+
+
+
+
+
+
+ return {cmd = cmd, args = args} end
+
+
+
+
+
+
+
+
+
+ local function _20_(_18_) local _arg_19_ = _18_ local url = _arg_19_["url"]
+ local rev = _arg_19_["rev"]
+ local _3ffetchSubmodules = _arg_19_["?fetchSubmodules"] local cmd = "nix"
+
+
+ local args
+
+
+
+
+
+
+ local function _21_() if (_3ffetchSubmodules == "true") then
+ return {"--fetch-submodules"} else
+ return {} end end args = concat_two(concat_two(concat_two(concat_two(concat_two(concat_two(concat_two(concat_two({}, {"run"}), {"nixpkgs#nix-prefetch-git"}), {"--"}), {"--no-deepClone"}), {"--quiet"}), {"--url", url}), {"--rev", rev}), _21_())
+
+ return {cmd = cmd, args = args} end prefetchers = {fetchFromGitHub = {["required-cmds"] = {"nix"}, ["required-keys"] = {"owner", "repo", "rev"}, prefetcher = _6_, extractor = nix_prefetch_git_sha256_extractor}, fetchFromGitLab = {["required-cmds"] = {"nix"}, ["required-keys"] = {"owner", "repo", "rev"}, prefetcher = _10_, extractor = nix_prefetch_git_sha256_extractor}, fetchurl = {["required-cmds"] = {"nix"}, ["required-keys"] = {"url"}, prefetcher = _14_, extractor = nix_prefetch_url_sha256_extractor}, fetchpatch = {["required-cmds"] = {"nix"}, ["required-keys"] = {"url"}, prefetcher = _17_, extractor = nix_prefetch_url_sha256_extractor}, fetchgit = {["required-cmds"] = {"nix"}, ["required-keys"] = {"url", "rev"}, prefetcher = _20_, extractor = nix_prefetch_git_sha256_extractor}}
 
 
 
