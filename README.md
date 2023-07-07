@@ -20,7 +20,7 @@ Dynamically and asynchronously update attributes of *fetch-like* constructions i
 ### Requirements
 
 - nvim `v0.9`
-- **[Optional]** [`nix-prefetch`](https://github.com/msteen/nix-prefetch) (and possibly more, checkout the included prefetchers [here](./fnl/nix-update/prefetchers.fnl))
+- **[Optional]** [`nix-prefetch-url`](https://github.com/NixOS/nixpkgs/blob/master/pkgs/build-support/fetchgit/nix-prefetch-git) (and possibly more, checkout the included prefetchers [here](./fnl/nix-update/prefetchers.fnl))
 
 #### Lazy.nvim
 
@@ -43,13 +43,13 @@ Dynamically and asynchronously update attributes of *fetch-like* constructions i
 
 Lua init file:
 ```lua
-require("nix-update").setup()
+require("nix-update").setup(opts)
 ```
 
 This `setup` function accepts the following table:
 
 ```lua
-local opts = {
+require("nix-update").setup({
   -- Extra prefetcher commands
   -- table of tables, where each one looks like this:
   extra_prefetcher_cmds = {
@@ -89,6 +89,7 @@ local opts = {
       end,
     },
   },
+})
 ```
 
 **NOTES:**
@@ -98,37 +99,114 @@ local opts = {
 
 ## Usage
 
-Bind `prefetch-fetch` to a keymap:
+Bind `prefetch_fetch` to a keymap:
 
 ```lua
 -- <leader> -> Nix update -> under Cursor
-vim.keymap.set("n", "<leader>nc", require("nix-update.fetches")["prefetch-fetch"])
+vim.keymap.set("n", "<leader>nc", require("nix-update").prefetch_fetch)
 ```
 
-Run it in a `Nix` file whilst in a *fetch*:
+Run it in a `Nix` file with the cursor inside a fetch:
 
 ```nix
 let
-  date = "12.34.56";
-  revision = "v${date}";
-in
-rec {
-  src = fetchTest {
-    a = "1234";
-    rev = revision;
+  pname = "vim-fmi-cli";
+  version = "0.2.0";
+in {
+  src = fetchFromGitHub {
+    owner = "AndrewRadev";
+    repo = pname;
+    rev = "v${version}";
+    sha256 = "sha256-SOMEOUTDATEDHASH";
   };
 }
 ```
 
+And `nix-update` will statically evaluate all string arguments to the fetch (string literals and interpolations), precalculate the correct hash and substitute it in the right place.
+
+```nix
+let
+  pname = "vim-fmi-cli";
+  version = "0.2.0";
+in {
+  src = fetchFromGitHub {
+    owner = "AndrewRadev";
+    repo = pname;
+    rev = "v${version}";
+    sha256 = "sha256-RAlvDiNvDVRNtex0aD8WESc4R/mAr7FjWtgzHWa4ZSI=";
+  };
+}
+```
+
+This updating mechanism allows for some pretty wild stuff, like this:
+
+```nix
+let
+  pname = "vim-fmi-cli";
+  version = "0.2.0";
+  type = "256";
+in rec {
+  hash = "SOMEOUTDATEDHASH";
+
+  src = fetchFromGitHub {
+    owner = "AndrewRadev";
+    repo = pname;
+    rev = "v${version}";
+    inherit sha256;
+  };
+
+  sha256 = "sha${type}-${hash}";
+}
+```
+
+Running `prefetch_fetch` on this will figure out how to construct the current value of `sha256` AND skip the common prefix when updating it, i.e. the `sha256-` part (consisting of the string `sha`, the value of `type`, a `-` and finally the value of `hash`, which are all scattered around `let`s and `rec`s) and only update the `hash` variable to the correct suffix of the new `sha256`:
+
+```nix
+let
+  pname = "vim-fmi-cli";
+  version = "0.2.0";
+  type = "256";
+in rec {
+  hash = "RAlvDiNvDVRNtex0aD8WESc4R/mAr7FjWtgzHWa4ZSI=";
+
+  src = fetchFromGitHub {
+    owner = "AndrewRadev";
+    repo = pname;
+    rev = "v${version}";
+    inherit sha256;
+  };
+
+  sha256 = "sha${type}-${hash}";
+}
+```
+
+I'm not really sure how often would this be of help but it's cool to have it nonetheless. 😄
+
 ## Development
 
-The `lua` folder is the compilation output of all files from the `fnl` directory. Currently, this compilation is done using the [`make.fnl`](./make.fnl) script, which is meant to be run from within Neovim, using [hotpot](https://github.com/rktjmp/hotpot.nvim).
+The `lua` folder is the compilation output of all files from the `fnl` directory. Currently, this compilation is done using the [`make.fnl`](./make.fnl) script, which is meant to be run from within Neovim, like this (from the root of the repository):
+
+```vim
+:Fnlfile make.fnl
+```
+
+While using this [hotpot](https://github.com/rktjmp/hotpot.nvim) configuration:
+
+```lua
+require("hotpot").setup({
+  compiler = {
+    modules = {
+      correlate = true,
+    },
+  },
+})
+```
+
 Currently, there aren't any strict style guidelines being followed, except the ones derived from using [Parinfer](https://shaunlebron.github.io/parinfer) (through [parinfer-rust](https://github.com/eraserhd/parinfer-rust))
 
 ## TODO
 
-- `kebab-case` -> `snake_case` for exported functions (maybe re-export from main module?)
-- Diagnostics or extmarks?
+- Provide a plain bash script that runs `fennel` manually and produces the same `lua` output
 - More commands
 - More prefetchers
 - Simpler prefetch commands (not just system ones, maybe lua functions)
