@@ -73,4 +73,4 @@
             (apply-update update))))}))
 
 {: setup
- : prefetch-fetch}
+ :prefetch_fetch prefetch-fetch}
