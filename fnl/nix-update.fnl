@@ -1,6 +1,7 @@
 (local {: calculate-updates
         : preview-update
-        : apply-update}
+        : apply-update
+        : prefetch-fetch}
        (require "nix-update.fetches"))
 
 (local {: cache}
@@ -8,8 +9,6 @@
 
 (local {: config}
        (require "nix-update._config"))
-
-;;; TODO: sort imports/exports alphabetically
 
 (macro save-options [opts-symbol options]
   (assert-compile
@@ -73,4 +72,5 @@
             ;; (preview-update update)
             (apply-update update))))}))
 
-{: setup}
+{: setup
+ : prefetch-fetch}

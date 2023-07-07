@@ -1,14 +1,13 @@
  local _local_1_ = require("nix-update.fetches") local calculate_updates = _local_1_["calculate-updates"]
  local preview_update = _local_1_["preview-update"]
  local apply_update = _local_1_["apply-update"]
+ local prefetch_fetch = _local_1_["prefetch-fetch"]
 
 
  local _local_2_ = require("nix-update._cache") local cache = _local_2_["cache"]
 
 
  local _local_3_ = require("nix-update._config") local config = _local_3_["config"]
-
-
 
 
 
@@ -73,4 +72,4 @@
 
  apply_update(update) end return nil else return nil end end return cache({handler = _5_}) end
 
- return {setup = setup}
+ return {setup = setup, ["prefetch-fetch"] = prefetch_fetch}
