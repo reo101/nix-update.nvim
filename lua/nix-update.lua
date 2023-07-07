@@ -62,7 +62,7 @@
 
  vim.notify("Could not prefetch")
  vim.print({data = data, err = err})
- return else end
+ return nil else end
  local updates = calculate_updates({bufnr = bufnr, fetch = fetch, ["new-data"] = data})
 
 

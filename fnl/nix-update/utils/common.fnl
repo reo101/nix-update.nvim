@@ -70,7 +70,7 @@
       (string.format
         "No bufnr given for getting coords"
         bufnr))
-    (lua "return"))
+    (lua "return nil"))
 
   ;;; Early return if no node
   (when (not node)
@@ -78,7 +78,7 @@
       (string.format
         "No node given for getting coords"
         bufnr))
-    (lua "return"))
+    (lua "return nil"))
 
   (let [(start-row start-col end-row end-col)
         (vim.treesitter.get_node_range node bufnr)]

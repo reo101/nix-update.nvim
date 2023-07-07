@@ -105,7 +105,7 @@
 
  if not bounder then
  vim.notify("No bounder")
- return else end
+ return nil else end
 
 
  if (vim.bo[bufnr0].filetype ~= "nix") then
@@ -202,12 +202,12 @@
 
  if not bounder then
  vim.notify("No bounder")
- return else end
+ return nil else end
 
 
  if not identifier then
  vim.notify("No identifier")
- return else end
+ return nil else end
 
 
  local depth0 = (depth or 0)
@@ -337,17 +337,17 @@
 
  if not bufnr then
  vim.notify("No bufnr")
- return else end
+ return nil else end
 
 
  if not node then
  vim.notify("No node")
- return else end
+ return nil else end
 
 
  if not name then
  vim.notify("No name")
- return else end
+ return nil else end
 
 
  local bindings
@@ -662,7 +662,6 @@
 
 
 
-
  local bufnr0 = (bufnr or vim.api.nvim_get_current_buf())
 
 
@@ -678,7 +677,7 @@
 
  if not fetch0 then
  vim.notify("No fetch (neither given nor one at cursor)")
- return else end
+ return nil else end
 
 
  local prefetcher local function _100_()
@@ -737,7 +736,7 @@
 
 
 
- return else end
+ return nil else end
 
 
 
@@ -753,7 +752,7 @@
 
 
 
- return else end
+ return nil else end
 
  cache[fetch0._fwhole] = {bufnr = bufnr0, fetch = fetch0, data = prefetcher.extractor(stdout)} return nil end call_command(prefetcher_cmd, _116_)
 

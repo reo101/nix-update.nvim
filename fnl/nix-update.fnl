@@ -62,7 +62,7 @@
                      err)
             (vim.notify "Could not prefetch")
             (vim.print {: data : err})
-            (lua "return"))
+            (lua "return nil"))
           (local updates (calculate-updates
                            {: bufnr
                             : fetch

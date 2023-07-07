@@ -24,7 +24,7 @@
 
 
 
- return else end
+ return nil else end
 
 
  if not fetch then
@@ -32,7 +32,7 @@
 
 
 
- return else end
+ return nil else end
 
 
  local namespace = vim.api.nvim_create_namespace("NixUpdate")
@@ -50,7 +50,7 @@
 
 
 
- return else end
+ return nil else end
 
  local diagnostics
  do local tbl_17_auto = {} local i_18_auto = #tbl_17_auto for key, value in pairs(data) do local val_19_auto

@@ -105,7 +105,7 @@
   ;;; Early return if there is no bounder
   (when (not bounder)
     (vim.notify "No bounder")
-    (lua "return"))
+    (lua "return nil"))
 
   ;;; Early return if not in a Nix file
   (when (not= (. vim :bo bufnr :filetype)
@@ -202,12 +202,12 @@
   ;;; Early return if there is no bounder
   (when (not bounder)
     (vim.notify "No bounder")
-    (lua "return"))
+    (lua "return nil"))
 
   ;;; Early return if there is no identifier
   (when (not identifier)
     (vim.notify "No identifier")
-    (lua "return"))
+    (lua "return nil"))
 
   ;;; Set depth and early return if too deep
   (local depth (or depth 0))
@@ -337,17 +337,17 @@
   ;;; Early return if there is no bufnr
   (when (not bufnr)
     (vim.notify "No bufnr")
-    (lua "return"))
+    (lua "return nil"))
 
   ;;; Early return if there is no node
   (when (not node)
     (vim.notify "No node")
-    (lua "return"))
+    (lua "return nil"))
 
   ;;; Early return if there is no name
   (when (not name)
     (vim.notify "No name")
-    (lua "return"))
+    (lua "return nil"))
 
   ;;; Find binding(s)
   (local
@@ -659,7 +659,6 @@
   (local opts (or opts {}))
   (local {: bufnr
           : fetch}
-          ;; : callback
          opts)
 
   ;;; Get selected buffer (custom or current)
@@ -673,12 +672,12 @@
   ;; ;;; Early return if there is no callback
   ;; (when (not= (type callback) :function)
   ;;   (vim.notify "Callback is not a function")
-  ;;   (lua "return"))
+  ;;   (lua "return nil"))
 
   ;;; Early return if there is no fetch
   (when (not fetch)
     (vim.notify "No fetch (neither given nor one at cursor)")
-    (lua "return"))
+    (lua "return nil"))
 
   ;;; Get correct prefetcher cmd generator
   (local prefetcher
@@ -737,7 +736,7 @@
       (string.format
         "Could not generate command for the prefetcher '%s'"
         fetch._fname))
-    (lua "return"))
+    (lua "return nil"))
 
   ;;; Call the command (will see results through `sed`)
   (call-command
@@ -753,7 +752,7 @@
                   "Oopsie: %s"
                   (vim.inspect
                     stderr))})
-        (lua "return"))
+        (lua "return nil"))
       ;;; Cache the prefetched data
       (tset
         cache

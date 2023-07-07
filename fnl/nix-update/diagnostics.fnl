@@ -24,7 +24,7 @@
       (string.format
         "No bufnr given for setting extmark"
         bufnr))
-    (lua "return"))
+    (lua "return nil"))
 
   ;;; Early return if no fetch
   (when (not fetch)
@@ -32,7 +32,7 @@
       (string.format
         "No fetch given for setting extmark"
         fetch))
-    (lua "return"))
+    (lua "return nil"))
 
   ;;; Create namespace for the extmarks
   (local namespace (vim.api.nvim_create_namespace "NixUpdate"))
@@ -50,7 +50,7 @@
           :severity vim.diagnostic.severity.ERROR
           :message (vim.inspect err)
           :source :NixUpdate}]))
-    (lua "return"))
+    (lua "return nil"))
 
   (local diagnostics
          (icollect [key value (pairs data)]

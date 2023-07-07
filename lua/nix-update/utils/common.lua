@@ -70,7 +70,7 @@
 
 
 
- return else end
+ return nil else end
 
 
  if not node then
@@ -78,7 +78,7 @@
 
 
 
- return else end
+ return nil else end
 
 
  local start_row, start_col, end_row, end_col = vim.treesitter.get_node_range(node, bufnr)
