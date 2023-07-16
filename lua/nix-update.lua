@@ -72,4 +72,4 @@
 
  apply_update(update) end return nil else return nil end end return cache({handler = _5_}) end
 
- return {setup = setup, ["prefetch-fetch"] = prefetch_fetch}
+ return {setup = setup, prefetch_fetch = prefetch_fetch}
