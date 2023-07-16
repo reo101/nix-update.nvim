@@ -1,4 +1,4 @@
-*nix-update.txt*           For NVIM v0.8.0           Last change: 2023 July 07
+*nix-update.txt*           For NVIM v0.8.0           Last change: 2023 July 16
 
 ==============================================================================
 Table of Contents                               *nix-update-table-of-contents*
@@ -26,13 +26,12 @@ LAZY.NVIM
     {
         "reo101/nix-update.nvim",
         dependencies = {
-            "nvim-lua/plenary.nvim",
-            "nvim-telescope/telescope.nvim",
+            -- None (yet), but could use those
+            -- "nvim-lua/plenary.nvim",
+            -- "nvim-telescope/telescope.nvim",
         }
         config = function()
-            require("nix-update").setup({
-                extra_prefetchers = {},
-            })
+            require("nix-update").setup()
         end,
     }
 <
