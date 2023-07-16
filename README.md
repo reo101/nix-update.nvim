@@ -11,7 +11,7 @@ Dynamically and asynchronously update attributes of *fetch-like* constructions i
 
 <!-- panvimdoc-ignore-start -->
 
-![demo image](https://raw.githubusercontent.com/reo101/nix-update.nvim/images/images/multiple_fetches.png)
+[![demo](https://asciinema.org/a/597049.svg)](https://asciinema.org/a/597049?autoplay=1)
 
 <!-- panvimdoc-ignore-end -->
 
@@ -28,13 +28,12 @@ Dynamically and asynchronously update attributes of *fetch-like* constructions i
 {
     "reo101/nix-update.nvim",
     dependencies = {
-        "nvim-lua/plenary.nvim",
-        "nvim-telescope/telescope.nvim",
+        -- None (yet), but could use those
+        -- "nvim-lua/plenary.nvim",
+        -- "nvim-telescope/telescope.nvim",
     }
     config = function()
-        require("nix-update").setup({
-            extra_prefetchers = {},
-        })
+        require("nix-update").setup()
     end,
 }
 ```
