@@ -7,21 +7,16 @@
 (local {: config}
        (require :nix-update._config))
 
-(local {: imap
+(local {: Result}
+       (require :nix-update.utils.fp))
+
+(local {: keys
+        : imap
         : flatten
         : find-child
         : coords
         : call-command}
        (require :nix-update.utils))
-
-(macro -m> [val ...]
-  "Thread a value through a list of method calls"
-  (assert-compile
-    val
-    "There should be an input value to the pipeline")
-  (accumulate [res val
-               _   [f & args] (ipairs [...])]
-    `(: ,res ,f ,(unpack args))))
 
 ;;; Define TS query for getting the fetches
 (local fetches-query-string
@@ -48,23 +43,17 @@
 
 ;;; Calculate fetches' names
 (fn gen-fetches-names []
-  (..
-    (table.concat
-      (icollect [fetch _ (pairs prefetchers)]
-        (string.format "\"%s\"" fetch))
-      " ")
-    " "
-    (table.concat
-      (icollect [fetch _ (pairs ((?. config :extra-prefetchers)))]
-        (string.format "\"%s\"" fetch))
-      " ")))
+  (let [names []]
+    (vim.list_extend names (keys prefetchers))
+    (vim.list_extend names (keys ((?. config :extra-prefetchers))))
+    (table.concat names " ")))
 
 ;;; Define query for matching
 (fn gen-fetches-query []
-       (vim.treesitter.parse_query
-         :nix
-         (string.format fetches-query-string
-                        (gen-fetches-names))))
+  (vim.treesitter.parse_query
+    :nix
+    (string.format fetches-query-string
+                   (gen-fetches-names))))
 
 ;;; Get AST root
 (fn get-root [opts]
@@ -131,27 +120,41 @@
                                   #(= ($1:type) "string_expression")
                                   binding)]
                           (when string-expression
-                            (icollect [node _ (string-expression:iter_children)]
-                              (match (node:type)
-                                ;;; Variable reference
-                                "interpolation"
-                                (let [expression
-                                       (find-child
-                                         #(and (= ($1:type) "variable_expression")
-                                               (= $2 "expression"))
-                                         node)]
-                                  (when expression
-                                    ;;; Mark for search up
-                                    {:?interp node
-                                     :name    (vim.treesitter.get_node_text
-                                               expression
-                                               bufnr)}))
-                                ;;; Final value - string
-                                "string_fragment"
-                                {:node  node
-                                 :value (vim.treesitter.get_node_text
-                                          node
-                                          bufnr)}))))
+                            (if
+                              (> (string-expression:named_child_count)
+                                 0)
+                              (icollect [node _ (string-expression:iter_children)]
+                                (match (node:type)
+                                  ;;; Variable reference
+                                  "interpolation"
+                                  (let [expression
+                                         (find-child
+                                           #(and (= ($1:type) "variable_expression")
+                                                 (= $2 "expression"))
+                                           node)]
+                                    (when expression
+                                      ;;; Mark for search up
+                                      {:?interp node
+                                       :name    (vim.treesitter.get_node_text
+                                                 expression
+                                                 bufnr)}))
+                                  ;;; Final value - string
+                                  (where t (or (= t "string_fragment")
+                                               (= t "escape_sequence")))
+                                  {:node  node
+                                   :value (vim.treesitter.get_node_text
+                                            node
+                                            bufnr)}))
+                              ;; else (empty string)
+                              (let [{: start-row : start-col}
+                                    (coords {: bufnr :node string-expression})
+                                    msg (string.format
+                                          "Please don't leave empty strings (row %s, col %s)"
+                                          (+ 1 start-row)
+                                          (+ 1 start-col))]
+                                ;;; TODO: better handling of empty strings
+                                (vim.notify msg)
+                                (error msg)))))
             var-expr   (let [variable-expression
                               (find-child
                                 #(= ($1:type) "variable_expression")
@@ -225,9 +228,9 @@
   ;;; NOTE: we would want to recursing on the same level (bounder)
   ;;;       if we are on `let_expression` and `rec_attrset_expression`
   ;;;       because they are are recursive in nature
-  (local recurse? (not= (-m> bounder
-                             [:parent]
-                             [:type])
+  (local recurse? (not= (-> bounder
+                            (: :parent)
+                            (: :type))
                         "attrset_expression"))
 
   ;;; Early return if bounder is nil
@@ -243,17 +246,24 @@
   (fn find-parent-bounder []
     ;;; Find closest parent with a binding_set
     ;;; (immediate parent would short-circuit the loop)
-    (var parent-bounder (-m> bounder
-                             [:parent]
-                             [:parent]))
+    (var parent-bounder (-?> bounder
+                             (: :parent)
+                             (: :parent)))
 
-    ;; (var parent-bounder (: (: bounder :parent) :parent))
+    ;;; NOTE: Continue while we both:
+    ;;; - have a `parent-bounder`
+    ;;; - it is either:
+    ;;;    - neither a:
+    ;;;      - `rec_attrset_expression`
+    ;;;      - `let_expression`
+    ;;;    - or doens't have a `binding_set`
     (while (and parent-bounder
-                (not= (parent-bounder:type) "rec_attrset_expression")
-                (not= (parent-bounder:type) "let_expression"))
+                (or (and (not= (parent-bounder:type) "rec_attrset_expression")
+                         (not= (parent-bounder:type) "let_expression"))
+                    (not (find-child
+                           #(= ($:type) "binding_set")
+                           parent-bounder))))
       (set parent-bounder (parent-bounder:parent)))
-
-    ;;; FIXME: empty let expressions have no binding_set
 
     ;;; If found, step down into its binding_set
     (when parent-bounder
@@ -399,8 +409,8 @@
         (table.insert notfounds notfound))))
 
   (if (> (length notfounds) 0)
-      {:bad notfounds}
-      {:good result}))
+      (Result.err notfounds)
+      (Result.ok result)))
 
 ;;; Get used fetches in bufnr
 (fn find-used-fetches [opts]
@@ -502,7 +512,7 @@
         (var i-new-value 1)
         (var short-circuit? false)
         (while (and (not short-circuit?)
-                   (<= i-new-value (length new-value)))
+                    (<= i-new-value (length new-value)))
           (let [fragment (. existing i-fragment)
                 {:node    fragment-node
                  :value   fragment-value
@@ -702,14 +712,14 @@
            ;;; Go through all fargs
            (each [farg-name farg-binding (pairs fetch._fargs)]
              (do
-               (match (fragments-to-value farg-binding.fragments)
+               (Result.bimap (fragments-to-value farg-binding.fragments)
                  ;;; It the value is resolved - set
-                 {:good result}
-                 (tset argument-values farg-name result)
+                 (fn [result]
+                   (tset argument-values farg-name result))
                  ;;; If the value is not resolved - remember which and why
-                 {:bad notfounds}
-                 (table.insert notfounds-pairs {: farg-name
-                                                : notfounds}))))
+                 (fn [notfounds]
+                   (table.insert notfounds-pairs {: farg-name
+                                                  : notfounds})))))
 
            ;;; For each unresolved value - report which and why
            (each [_ {: farg-name : notfounds} (ipairs notfounds-pairs)]

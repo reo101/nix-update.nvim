@@ -1,5 +1,6 @@
  local _local_1_ = require("nix-update.utils.common") local any = _local_1_["any"]
  local all = _local_1_["all"]
+ local keys = _local_1_["keys"]
  local map = _local_1_["map"]
  local imap = _local_1_["imap"]
  local filter = _local_1_["filter"]
@@ -18,4 +19,4 @@
  local create_proxied = _local_3_["create-proxied"]
 
 
- return {any = any, all = all, map = map, imap = imap, filter = filter, flatten = flatten, ["find-child"] = find_child, ["find-children"] = find_children, ["missing-keys"] = missing_keys, ["concat-two"] = concat_two, coords = coords, ["prefetcher-mt"] = prefetcher_mt, ["create-proxied"] = create_proxied, ["call-command"] = call_command}
+ return {any = any, all = all, keys = keys, map = map, imap = imap, filter = filter, flatten = flatten, ["find-child"] = find_child, ["find-children"] = find_children, ["missing-keys"] = missing_keys, ["concat-two"] = concat_two, coords = coords, ["prefetcher-mt"] = prefetcher_mt, ["create-proxied"] = create_proxied, ["call-command"] = call_command}

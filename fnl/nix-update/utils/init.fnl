@@ -1,5 +1,6 @@
 (local {: any
         : all
+        : keys
         : map
         : imap
         : filter
@@ -20,6 +21,7 @@
 
 {: any
  : all
+ : keys
  : map
  : imap
  : filter

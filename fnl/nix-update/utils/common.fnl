@@ -10,6 +10,10 @@
       (lua "return false")))
   true)
 
+(fn keys [tbl]
+  (icollect [k _ (pairs tbl)]
+    k))
+
 (fn map [f tbl]
   (collect [k v (pairs tbl)]
     (values (f {: k : v}))))
@@ -89,6 +93,7 @@
 
 {: any
  : all
+ : keys
  : map
  : imap
  : filter

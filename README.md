@@ -183,29 +183,25 @@ I'm not really sure how often would this be of help but it's cool to have it non
 
 ## Development
 
-The `lua` folder is the compilation output of all files from the `fnl` directory. Currently, this compilation is done using the [`make.fnl`](./make.fnl) script, which is meant to be run from within Neovim, like this (from the root of the repository):
+The `lua` folder is the compilation output of all files from the `fnl` directory. This is done using this [`Makefile`](./Makefile):
 
-```vim
-:Fnlfile make.fnl
+```bash
+make
 ```
 
-While using this [hotpot](https://github.com/rktjmp/hotpot.nvim) configuration:
+You can clear the compilation output (the `lua` folder) using the `clean` subcommand:
 
-```lua
-require("hotpot").setup({
-  compiler = {
-    modules = {
-      correlate = true,
-    },
-  },
-})
+```bash
+make clean
 ```
+
+**NOTES:**
+- You have to have `fennel` (version `1.2.0`) in your `$PATH`
 
 Currently, there aren't any strict style guidelines being followed, except the ones derived from using [Parinfer](https://shaunlebron.github.io/parinfer) (through [parinfer-rust](https://github.com/eraserhd/parinfer-rust))
 
 ## TODO
 
-- Provide a plain bash script that runs `fennel` manually and produces the same `lua` output
 - More commands
 - More prefetchers
 - Simpler prefetch commands (not just system ones, maybe lua functions)
