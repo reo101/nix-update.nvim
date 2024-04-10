@@ -1,0 +1,2 @@
+- Parse literals (bools and numbers, maybe only under `toString`)
+- Research `--arg` option for `nurl` (pass all fetcher args)

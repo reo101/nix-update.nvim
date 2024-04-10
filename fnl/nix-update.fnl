@@ -19,7 +19,7 @@
     (table? options)
     "Expected list of option names"
     options)
-  (var res
+  (local res
     `(let [opts#
             (vim.tbl_deep_extend
               :keep

@@ -1,5 +1,4 @@
-(local {: concat-two
-        : prefetcher-mt}
+(local {: prefetcher-mt}
        (require :nix-update.utils))
 
 (macro concat [...]
@@ -22,22 +21,27 @@
 
   res)
 
-(local nix-prefetch-git-sha256-extractor
+(local nurl-json-hash-extractor
        (fn [stdout]
-         (let [sha256 (-> stdout
-                          (table.concat)
-                          (vim.json.decode)
-                          (. :sha256)
-                          (->> (string.format "nix hash to-sri \"sha256:%s\""))
-                          (vim.fn.system)
-                          (string.gsub "\n" ""))]
-           {: sha256})))
+         (let [hash (-> stdout
+                        table.concat
+                        vim.json.decode
+                        (. :args :hash))]
+           {: hash})))
 
-(local nix-prefetch-url-sha256-extractor
+(local nix-json-hash-extractor
+       (fn [stdout]
+         (let [hash (-> stdout
+                        table.concat
+                        vim.json.decode
+                        (. :hash))]
+           {: hash})))
+
+(local nix-json-sha256-extractor
        (fn [stdout]
          (let [sha256 (-> stdout
-                          (table.concat)
-                          (vim.json.decode)
+                          table.concat
+                          vim.json.decode
                           (. :hash))]
            {: sha256})))
 
@@ -51,7 +55,7 @@
 (local prefetchers
   {;; GitHub
    :fetchFromGitHub
-   {:required-cmds [:nix]
+   {:required-cmds [:nurl]
     :required-keys [:owner
                     :repo
                     :rev]
@@ -61,30 +65,30 @@
            : repo
            : rev
            : ?fetchSubmodules}]
-       (local cmd "nix")
+       (local cmd "nurl")
 
-       (local args (concat ["run"]
-                           ["nixpkgs#nix-prefetch-git"]
-                           ["--"]
-                           ["--no-deepClone"]
-                           ["--quiet"]
-                           ["--url" (string.format
-                                      "https://www.github.com/%s/%s"
-                                      owner
-                                      repo)]
-                           ["--rev" rev]
-                           (if (= ?fetchSubmodules :true)
-                             ["--fetch-submodules"]
-                             [])))
+       (local args (concat ["--json"]
+                           ;; NOTE: breaks for some reason
+                           ;; ["--fetcher" "fetchFromGitHub"]
+                           [(string.format
+                              "--submodules=%s"
+                              (if ?fetchSubmodules
+                                  :true
+                                  :false))]
+                           [(string.format
+                              "https://www.github.com/%s/%s"
+                              owner
+                              repo)]
+                           [rev]))
 
        {: cmd
         : args})
     ;; (cmd result -> new fields)
-    :extractor nix-prefetch-git-sha256-extractor}
+    :extractor nurl-json-hash-extractor}
 
    ;; GitLab
    :fetchFromGitLab
-   {:required-cmds [:nix]
+   {:required-cmds [:nurl]
     :required-keys [:owner
                     :repo
                     :rev]
@@ -94,26 +98,25 @@
            : repo
            : rev
            : ?fetchSubmodules}]
-       (local cmd "nix")
+       (local cmd "nurl")
 
-       (local args (concat ["run"]
-                           ["nixpkgs#nix-prefetch-git"]
-                           ["--"]
-                           ["--no-deepClone"]
-                           ["--quiet"]
-                           ["--url" (string.format
-                                      "https://www.gitlab.com/%s/%s"
-                                      owner
-                                      repo)]
-                           ["--rev" rev]
-                           (if (= ?fetchSubmodules :true)
-                             ["--fetch-submodules"]
-                             [])))
+       (local args (concat ["--json"]
+                           ;; ["--fetcher" "fetchFromGitLab"]
+                           [(string.format
+                              "--submodules=%s"
+                              (if ?fetchSubmodules
+                                  :true
+                                  :false))]
+                           [(string.format
+                              "https://www.gitlab.com/%s/%s"
+                              owner
+                              repo)]
+                           [rev]))
 
        {: cmd
         : args})
     ;; (cmd result -> new fields)
-    :extractor nix-prefetch-git-sha256-extractor}
+    :extractor nurl-json-hash-extractor}
 
    ;; Fetch URL
    :fetchurl
@@ -131,7 +134,7 @@
 
        {: cmd
         : args})
-    :extractor nix-prefetch-url-sha256-extractor}
+    :extractor nix-json-sha256-extractor}
 
    ;; Fetch patch
    :fetchpatch
@@ -149,33 +152,32 @@
 
        {: cmd
         : args})
-    :extractor nix-prefetch-url-sha256-extractor}
+    :extractor nix-json-hash-extractor}
 
    ;; Fetch GIT
    :fetchgit
-   {:required-cmds [:nix]
+   {:required-cmds [:nurl]
     :required-keys [:url
                     :rev]
     :prefetcher
      (fn [{: url
            : rev
            : ?fetchSubmodules}]
-       (local cmd "nix")
+       (local cmd "nurl")
 
-       (local args (concat ["run"]
-                           ["nixpkgs#nix-prefetch-git"]
-                           ["--"]
-                           ["--no-deepClone"]
-                           ["--quiet"]
-                           ["--url" url]
-                           ["--rev" rev]
-                           (if (= ?fetchSubmodules :true)
-                             ["--fetch-submodules"]
-                             [])))
+       (local args (concat ["--json"]
+                           ["--fetcher" "builtins.fetchGit"]
+                           [(string.format
+                              "--submodules=%s"
+                              (if ?fetchSubmodules
+                                  :true
+                                  :false))]
+                           [url]
+                           [rev]))
 
        {: cmd
         : args})
-    :extractor nix-prefetch-git-sha256-extractor}})
+    :extractor nurl-json-hash-extractor}})
 
 ;;; Make all prefetchers (tables) callable (for common error handling)
 (each [_ prefetcher (pairs prefetchers)]

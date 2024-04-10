@@ -39,7 +39,7 @@
  local opts0 = (opts or {})
  local opts1
  do local tbl_14_auto = {} for k, v in pairs(opts0) do
- local k_15_auto, v_16_auto = string.gsub(k, "_", "-"), v if ((k_15_auto ~= nil) and (v_16_auto ~= nil)) then tbl_14_auto[k_15_auto] = v_16_auto else end end opts1 = tbl_14_auto end do local opts_2_auto = vim.tbl_deep_extend("keep", opts1, {["extra-prefetchers"] = {}}) for k_5_auto, v_6_auto in pairs((opts_2_auto)["extra-prefetchers"]) do config["extra-prefetchers"][k_5_auto] = v_6_auto end end
+ local k_15_auto, v_16_auto = string.gsub(k, "_", "-"), v if ((k_15_auto ~= nil) and (v_16_auto ~= nil)) then tbl_14_auto[k_15_auto] = v_16_auto else end end opts1 = tbl_14_auto end do local opts_2_auto = vim.tbl_deep_extend("keep", opts1, {["extra-prefetchers"] = {}}) for k_5_auto, v_6_auto in pairs(opts_2_auto["extra-prefetchers"]) do config["extra-prefetchers"][k_5_auto] = v_6_auto end end
 
 
 

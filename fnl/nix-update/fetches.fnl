@@ -50,7 +50,7 @@
 
 ;;; Define query for matching
 (fn gen-fetches-query []
-  (vim.treesitter.parse_query
+  (vim.treesitter.query.parse
     :nix
     (string.format fetches-query-string
                    (gen-fetches-names))))
@@ -396,7 +396,7 @@
 ;;; Concatinate all `fragment`s from a binding
 (fn fragments-to-value [binding]
   (var result "")
-  (var notfounds [])
+  (local notfounds [])
 
   (each [_ fragment (ipairs binding)]
     (do
@@ -502,7 +502,7 @@
           : new-data}
          opts)
 
-  (var updates [])
+  (local updates [])
   (each [key new-value (pairs new-data)]
     (local existing (?. fetch :_fargs key :fragments))
     (if existing
@@ -706,8 +706,8 @@
   ;;; Resolve and validate arguments' values
   (local argument-values
          (do
-           (var argument-values {})
-           (var notfounds-pairs [])
+           (local argument-values {})
+           (local notfounds-pairs [])
 
            ;;; Go through all fargs
            (each [farg-name farg-binding (pairs fetch._fargs)]

@@ -28,7 +28,7 @@
       v)))
 
 (fn flatten [seq ?res]
-  (var res (or ?res []))
+  (local res (or ?res []))
   (if (vim.tbl_islist seq)
     (each [_ v (pairs seq)]
       (flatten v res))

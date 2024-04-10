@@ -14,8 +14,8 @@
   (var handle nil)
 
   ;;; Define result (will be appended to by `on-read`)
-  (var result {:stdout []
-               :stderr []})
+  (local result {:stdout []
+                 :stderr []})
 
   ;;; Define on-exit handler
   (fn on-exit [_code _status]
