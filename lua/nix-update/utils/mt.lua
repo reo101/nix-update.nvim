@@ -23,8 +23,8 @@
  local function _5_(_self, opts)
 
  local opts0 = (opts or {})
- local _local_6_ = opts0 local handler = _local_6_["handler"]
- local clear = _local_6_["clear"]
+ local handler = opts0["handler"]
+ local clear = opts0["clear"]
 
 
 
@@ -45,7 +45,7 @@
  local prefetcher_mt
 
 
- local function _10_(self, args)
+ local function _9_(self, args)
 
  if self["required-keys"] then
  local missing = missing_keys(args, self["required-keys"])
@@ -59,7 +59,7 @@
 
 
  if self["required-cmds"] then
- local missing local function _13_(_241) return (vim.fn.executable(_241.v) == 0) end missing = filter(_13_, self["required-cmds"])
+ local missing local function _12_(_241) return (vim.fn.executable(_241.v) == 0) end missing = filter(_12_, self["required-cmds"])
  if (#missing > 0) then
  vim.notify(string.format("Missing commands: %s", vim.inspect(missing)))
 
@@ -69,6 +69,6 @@
  return nil else end else end
 
 
- return self.prefetcher(args) end prefetcher_mt = {__call = _10_}
+ return self.prefetcher(args) end prefetcher_mt = {__call = _9_}
 
  return {["create-proxied"] = create_proxied, ["prefetcher-mt"] = prefetcher_mt}

@@ -1,7 +1,7 @@
  local uv = (vim.uv or vim.loop)
 
 
- local function call_command(_1_, callback) local _arg_2_ = _1_ local cmd = _arg_2_["cmd"] local args = _arg_2_["args"]
+ local function call_command(_1_, callback) local cmd = _1_["cmd"] local args = _1_["args"]
 
  local stdout = uv.new_pipe()
  local stderr = uv.new_pipe()
@@ -23,15 +23,15 @@
  uv.read_stop(pipe)
  uv.close(pipe) end
  uv.close(handle)
- local function _3_() return callback(result) end return vim.schedule(_3_) end
+ local function _2_() return callback(result) end return vim.schedule(_2_) end
 
 
  local function on_read(pipe)
- local function _4_(_status, data)
+ local function _3_(_status, data)
  if data then
  for val in vim.gsplit(data, "\n") do
  if (val ~= "") then
- table.insert(result[pipe], val) else end end return nil else return nil end end return _4_ end
+ table.insert(result[pipe], val) else end end return nil else return nil end end return _3_ end
 
 
 

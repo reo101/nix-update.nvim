@@ -12,10 +12,10 @@
  local function set_diagnostic(opts)
 
  local opts0 = (opts or {})
- local _local_4_ = opts0 local bufnr = _local_4_["bufnr"]
- local fetch = _local_4_["fetch"]
- local data = _local_4_["data"]
- local err = _local_4_["err"]
+ local bufnr = opts0["bufnr"]
+ local fetch = opts0["fetch"]
+ local data = opts0["data"]
+ local err = opts0["err"]
 
 
 
@@ -39,8 +39,8 @@
 
  if (err and (#(data or {}) == 0)) then
 
- do local _let_7_ = coords({bufnr = bufnr, node = fetch._fwhole}) local start_row = _let_7_["start-row"]
- local start_col = _let_7_["start-col"]
+ do local _let_6_ = coords({bufnr = bufnr, node = fetch._fwhole}) local start_row = _let_6_["start-row"]
+ local start_col = _let_6_["start-col"]
 
  vim.diagnostic.set(namespace, bufnr, {{lnum = start_row, col = start_col, severity = vim.diagnostic.severity.ERROR, message = vim.inspect(err), source = "NixUpdate"}}) end
 
@@ -53,15 +53,15 @@
  return nil else end
 
  local diagnostics
- do local tbl_17_auto = {} local i_18_auto = #tbl_17_auto for key, value in pairs(data) do local val_19_auto
+ do local tbl_21_auto = {} local i_22_auto = 0 for key, value in pairs(data) do local val_23_auto
  do
 
 
 
- local function _10_() local farg = fetch._fargs[key]
+ local function _8_() local farg = fetch._fargs[key]
  if farg then
 
- local _let_11_ = coords({bufnr = bufnr, node = farg.binding}) local start_row = _let_11_["start-row"] local start_col = _let_11_["start-col"]
+ local _let_9_ = coords({bufnr = bufnr, node = farg.binding}) local start_row = _let_9_["start-row"] local start_col = _let_9_["start-col"]
 
  return {["start-row"] = start_row, ["start-col"] = start_col, message = string.format("Update field \"%s\" to \"%s\"", key, value), severity = vim.diagnostic.severity.HINT} else
 
@@ -71,16 +71,16 @@
 
 
 
- local _let_12_ = coords({bufnr = bufnr, node = fetch._fwhole}) local start_row = _let_12_["start-row"] local start_col = _let_12_["start-col"]
+ local _let_10_ = coords({bufnr = bufnr, node = fetch._fwhole}) local start_row = _let_10_["start-row"] local start_col = _let_10_["start-col"]
 
- return {["start-row"] = start_row, ["start-col"] = start_col, message = string.format("Add new field \"%s\" with value \"%s\"", key, value), severity = vim.diagnostic.severity.WARN} end end local _let_9_ = _10_() local start_row = _let_9_["start-row"] local start_col = _let_9_["start-col"] local message = _let_9_["message"] local severity = _let_9_["severity"]
-
-
+ return {["start-row"] = start_row, ["start-col"] = start_col, message = string.format("Add new field \"%s\" with value \"%s\"", key, value), severity = vim.diagnostic.severity.WARN} end end local _let_12_ = _8_() local start_row = _let_12_["start-row"] local start_col = _let_12_["start-col"] local message = _let_12_["message"] local severity = _let_12_["severity"]
 
 
 
 
- val_19_auto = {lnum = start_row, col = start_col, severity = severity, message = message, source = "NixUpdate"} end if (nil ~= val_19_auto) then i_18_auto = (i_18_auto + 1) do end (tbl_17_auto)[i_18_auto] = val_19_auto else end end diagnostics = tbl_17_auto end
+
+
+ val_23_auto = {lnum = start_row, col = start_col, severity = severity, message = message, source = "NixUpdate"} end if (nil ~= val_23_auto) then i_22_auto = (i_22_auto + 1) tbl_21_auto[i_22_auto] = val_23_auto else end end diagnostics = tbl_21_auto end
 
 
 
@@ -102,7 +102,7 @@
  local function remove_diagnostic(opts)
 
  local opts0 = (opts or {})
- local _local_15_ = opts0 local bufnr = _local_15_["bufnr"]
+ local bufnr = opts0["bufnr"]
 
 
 
@@ -112,7 +112,7 @@
  local function NixPrefetch(opts)
 
  local opts0 = (opts or {})
- local _local_16_ = opts0 local bufnr = _local_16_["bufnr"]
+ local bufnr = opts0["bufnr"]
 
 
 
@@ -138,6 +138,6 @@
  prefetch_fetch({bufnr = bufnr0, fetch = fetch}) end return nil end
 
 
- local function _17_() return NixPrefetch() end vim.api.nvim_create_user_command("NixPrefetch", _17_, {})
+ local function _14_() return NixPrefetch() end vim.api.nvim_create_user_command("NixPrefetch", _14_, {})
 
  return {["set-diagnostic"] = set_diagnostic, ["remove-diagnostic"] = remove_diagnostic}

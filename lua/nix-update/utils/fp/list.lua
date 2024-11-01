@@ -11,7 +11,7 @@
 
  List.new = function(...)
  local t = table.pack(...)
- do end (t)["n"] = nil
+ t["n"] = nil
  return t end
 
 

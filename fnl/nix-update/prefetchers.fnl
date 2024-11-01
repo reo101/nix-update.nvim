@@ -37,14 +37,6 @@
                         (. :hash))]
            {: hash})))
 
-(local nix-json-sha256-extractor
-       (fn [stdout]
-         (let [sha256 (-> stdout
-                          table.concat
-                          vim.json.decode
-                          (. :hash))]
-           {: sha256})))
-
 ;;; Define the prefetchers for each supported fetch
 ;;; {
 ;;;   :required-cmds ;; Required programs to be on $PATH
@@ -134,7 +126,7 @@
 
        {: cmd
         : args})
-    :extractor nix-json-sha256-extractor}
+    :extractor nix-json-hash-extractor}
 
    ;; Fetch patch
    :fetchpatch

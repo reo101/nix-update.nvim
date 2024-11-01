@@ -439,32 +439,38 @@
            (icollect [_pattern matcher _metadata
                       (fetches-query:iter_matches root bufnr 0 -1)]
              ;;; Construct a table from ...
-             (collect [id node
-                       (pairs matcher)]
-               (let [capture-id (. fetches-query :captures id)]
-                 (values
-                   capture-id
-                   (match capture-id
-                     ;;; ... the fetch name ...
-                     "_fname"
-                     (vim.treesitter.get_node_text node bufnr)
-                     ;;; ... its arguments ...
-                     "_fargs"
-                     (collect [name _
-                               (pairs (find-all-local-bindings {: bufnr
-                                                                :bounder node}))]
-                       (let [binding (try-get-binding-bounder {: bufnr
-                                                               : node
-                                                               : name})
-                             fragments (try-get-binding-value {: bufnr
-                                                               :bounder node
-                                                               :identifier name})]
-                         (values name {: binding
-                                       : fragments})))
-                     ;;; ... and the whole node
-                     ;;; (for checking whether the cursor is inside of it)
-                     "_fwhole"
-                     node)))))))
+             (do
+               (local res {})
+               (each [id nodes (pairs matcher)]
+                 (collect [_ node (ipairs nodes) &into res]
+                   (let [capture-id (. fetches-query :captures id)]
+                     (values
+                       capture-id
+                       (match capture-id
+                         ;;; ... the fetch name ...
+                         "_fname"
+                         (vim.treesitter.get_node_text node bufnr)
+                         ;;; ... its arguments ...
+                         "_fargs"
+                         (collect [name _ (-> {: bufnr
+                                               :bounder node}
+                                              find-all-local-bindings
+                                              pairs)]
+                           (let [binding (try-get-binding-bounder
+                                           {: bufnr
+                                            : node
+                                            : name})
+                                 fragments (try-get-binding-value
+                                             {: bufnr
+                                              :bounder node
+                                              :identifier name})]
+                             (values name {: binding
+                                           : fragments})))
+                         ;;; ... and the whole node
+                         ;;; (for checking whether the cursor is inside of it)
+                         "_fwhole"
+                         node)))))
+               res))))
 
   ;;; Return the accumulated fetches
   found-fetches)

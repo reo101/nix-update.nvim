@@ -37,14 +37,6 @@
 
  return {hash = hash} end nix_json_hash_extractor = _3_
 
- local nix_json_sha256_extractor
- local function _4_(stdout)
- local sha256 = vim.json.decode(table.concat(stdout)).hash
-
-
-
- return {sha256 = sha256} end nix_json_sha256_extractor = _4_
-
 
 
 
@@ -61,10 +53,10 @@
 
 
 
- local function _7_(_5_) local _arg_6_ = _5_ local owner = _arg_6_["owner"]
- local repo = _arg_6_["repo"]
- local rev = _arg_6_["rev"]
- local _3ffetchSubmodules = _arg_6_["?fetchSubmodules"] local cmd = "nurl"
+ local function _5_(_4_) local owner = _4_["owner"]
+ local repo = _4_["repo"]
+ local rev = _4_["rev"]
+ local _3ffetchSubmodules = _4_["?fetchSubmodules"] local cmd = "nurl"
 
 
  local args
@@ -72,7 +64,7 @@
 
 
 
- local function _8_() if _3ffetchSubmodules then return "true" else return "false" end end args = {"--json", string.format("--submodules=%s", _8_()), string.format("https://www.github.com/%s/%s", owner, repo), rev}
+ local function _6_() if _3ffetchSubmodules then return "true" else return "false" end end args = {"--json", string.format("--submodules=%s", _6_()), string.format("https://www.github.com/%s/%s", owner, repo), rev}
 
 
 
@@ -94,17 +86,17 @@
 
 
 
- local function _11_(_9_) local _arg_10_ = _9_ local owner = _arg_10_["owner"]
- local repo = _arg_10_["repo"]
- local rev = _arg_10_["rev"]
- local _3ffetchSubmodules = _arg_10_["?fetchSubmodules"] local cmd = "nurl"
+ local function _8_(_7_) local owner = _7_["owner"]
+ local repo = _7_["repo"]
+ local rev = _7_["rev"]
+ local _3ffetchSubmodules = _7_["?fetchSubmodules"] local cmd = "nurl"
 
 
  local args
 
 
 
- local function _12_() if _3ffetchSubmodules then return "true" else return "false" end end args = {"--json", string.format("--submodules=%s", _12_()), string.format("https://www.gitlab.com/%s/%s", owner, repo), rev}
+ local function _9_() if _3ffetchSubmodules then return "true" else return "false" end end args = {"--json", string.format("--submodules=%s", _9_()), string.format("https://www.gitlab.com/%s/%s", owner, repo), rev}
 
 
 
@@ -123,7 +115,7 @@
 
 
 
- local function _15_(_13_) local _arg_14_ = _13_ local url = _arg_14_["url"] local cmd = "nix" local args = {"store", "prefetch-file", "--json", "--hash-type", "sha256", url}
+ local function _11_(_10_) local url = _10_["url"] local cmd = "nix" local args = {"store", "prefetch-file", "--json", "--hash-type", "sha256", url}
 
 
 
@@ -141,7 +133,7 @@
 
 
 
- local function _18_(_16_) local _arg_17_ = _16_ local url = _arg_17_["url"] local cmd = "nix" local args = {"store", "prefetch-file", "--json", "--hash-type", "sha256", url}
+ local function _13_(_12_) local url = _12_["url"] local cmd = "nix" local args = {"store", "prefetch-file", "--json", "--hash-type", "sha256", url}
 
 
 
@@ -160,22 +152,22 @@
 
 
 
- local function _21_(_19_) local _arg_20_ = _19_ local url = _arg_20_["url"]
- local rev = _arg_20_["rev"]
- local _3ffetchSubmodules = _arg_20_["?fetchSubmodules"] local cmd = "nurl"
+ local function _15_(_14_) local url = _14_["url"]
+ local rev = _14_["rev"]
+ local _3ffetchSubmodules = _14_["?fetchSubmodules"] local cmd = "nurl"
 
 
  local args
 
 
 
- local function _22_() if _3ffetchSubmodules then return "true" else return "false" end end args = {"--json", "--fetcher", "builtins.fetchGit", string.format("--submodules=%s", _22_()), url, rev}
+ local function _16_() if _3ffetchSubmodules then return "true" else return "false" end end args = {"--json", "--fetcher", "builtins.fetchGit", string.format("--submodules=%s", _16_()), url, rev}
 
 
 
 
 
- return {cmd = cmd, args = args} end prefetchers = {fetchFromGitHub = {["required-cmds"] = {"nurl"}, ["required-keys"] = {"owner", "repo", "rev"}, prefetcher = _7_, extractor = nurl_json_hash_extractor}, fetchFromGitLab = {["required-cmds"] = {"nurl"}, ["required-keys"] = {"owner", "repo", "rev"}, prefetcher = _11_, extractor = nurl_json_hash_extractor}, fetchurl = {["required-cmds"] = {"nix"}, ["required-keys"] = {"url"}, prefetcher = _15_, extractor = nix_json_sha256_extractor}, fetchpatch = {["required-cmds"] = {"nix"}, ["required-keys"] = {"url"}, prefetcher = _18_, extractor = nix_json_hash_extractor}, fetchgit = {["required-cmds"] = {"nurl"}, ["required-keys"] = {"url", "rev"}, prefetcher = _21_, extractor = nurl_json_hash_extractor}}
+ return {cmd = cmd, args = args} end prefetchers = {fetchFromGitHub = {["required-cmds"] = {"nurl"}, ["required-keys"] = {"owner", "repo", "rev"}, prefetcher = _5_, extractor = nurl_json_hash_extractor}, fetchFromGitLab = {["required-cmds"] = {"nurl"}, ["required-keys"] = {"owner", "repo", "rev"}, prefetcher = _8_, extractor = nurl_json_hash_extractor}, fetchurl = {["required-cmds"] = {"nix"}, ["required-keys"] = {"url"}, prefetcher = _11_, extractor = nix_json_hash_extractor}, fetchpatch = {["required-cmds"] = {"nix"}, ["required-keys"] = {"url"}, prefetcher = _13_, extractor = nix_json_hash_extractor}, fetchgit = {["required-cmds"] = {"nurl"}, ["required-keys"] = {"url", "rev"}, prefetcher = _15_, extractor = nurl_json_hash_extractor}}
 
 
 
