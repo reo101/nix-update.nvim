@@ -1,4 +1,4 @@
-*nix-update.txt*           For NVIM v0.8.0           Last change: 2024 June 10
+*nix-update.txt*         For NVIM v0.8.0         Last change: 2024 November 02
 
 ==============================================================================
 Table of Contents                               *nix-update-table-of-contents*
