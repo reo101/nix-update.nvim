@@ -77,9 +77,10 @@
     (tree:root)))
 
 ;;; Find all local bindings
-;;; NOTE: `{: ?interp : name}` -> name of referenced variable
+;;; NOTE: `{: ?interp : name : ?from}` -> name of referenced variable 
+;;;                                       (optionally from specific attrset)
 ;;;       `{: ?interp : node : value}` -> node + value of found definition
-;;;       `{: notfound}` -> not found
+;;;       `{: notfound}`               -> not found
 (fn find-all-local-bindings [opts]
   ;;; Extract opts
   (local opts (or opts {}))
@@ -109,16 +110,16 @@
       ;;; Classic binding
       "binding"
       (let [attr        (find-child
-                          #(= ($1:type) "attrpath")
-                          binding)
+                          binding
+                          #(= ($1:type) "attrpath"))
             attr-name   (when attr
                           (vim.treesitter.get_node_text
                             attr
                             bufnr))
             string-expr (let [string-expression
                                (find-child
-                                  #(= ($1:type) "string_expression")
-                                  binding)]
+                                 binding
+                                 #(= ($1:type) "string_expression"))]
                           (when string-expression
                             (if
                               (> (string-expression:named_child_count)
@@ -127,17 +128,41 @@
                                 (match (node:type)
                                   ;;; Variable reference
                                   "interpolation"
-                                  (let [expression
-                                         (find-child
-                                           #(and (= ($1:type) "variable_expression")
-                                                 (= $2 "expression"))
-                                           node)]
-                                    (when expression
-                                      ;;; Mark for search up
-                                      {:?interp node
-                                       :name    (vim.treesitter.get_node_text
-                                                 expression
-                                                 bufnr)}))
+                                  (or ;; Either a classic variable
+                                      (let [variable-expression
+                                              (-?> node
+                                                   (find-child
+                                                     #(and (= ($1:type) "variable_expression")
+                                                           (= $2 "expression"))))]
+                                        (if variable-expression
+                                          ;;; Mark for search up
+                                          {:?interp node
+                                           :name    (vim.treesitter.get_node_text
+                                                      variable-expression
+                                                      bufnr)}))
+                                       ;; ... or variable attribute (`finalAttrs.attr`)
+                                      (let [select-expression
+                                              (-?> node
+                                                   (find-child
+                                                     #(and (= ($1:type) "select_expression")
+                                                           (= $2 "expression"))))
+                                            attrset-name
+                                              (-?> select-expression
+                                                   (find-child
+                                                     #(and (= ($1:type) "variable_expression")
+                                                           (= $2 "expression")))
+                                                   (vim.treesitter.get_node_text bufnr))
+                                            attr-name
+                                              (-?> select-expression
+                                                   (find-child
+                                                     #(and (= ($1:type) "attrpath")
+                                                           (= $2 "attrpath")))
+                                                   (vim.treesitter.get_node_text bufnr))]
+                                        (when (and attrset-name attr-name)
+                                          ;;; Mark for search up
+                                          {:?interp node
+                                           :name attr-name
+                                           :?from attrset-name})))
                                   ;;; Final value - string
                                   (where t (or (= t "string_fragment")
                                                (= t "escape_sequence")))
@@ -156,23 +181,46 @@
                                 (vim.notify msg)
                                 (error msg)))))
             var-expr   (let [variable-expression
-                              (find-child
-                                #(= ($1:type) "variable_expression")
-                                binding)]
-                         (when variable-expression
+                               (-?> binding
+                                    (find-child
+                                      #(and (= ($1:type) "variable_expression")
+                                            (= $2 "expression"))))]
+                         (if variable-expression
                            ;;; Mark for search up
                            [{:name (vim.treesitter.get_node_text
-                                      variable-expression
-                                      bufnr)}]))
+                                     variable-expression
+                                     bufnr)}]))
+            attr-expr  (let [select-expression
+                               (-?> binding
+                                    (find-child
+                                      #(and (= ($1:type) "select_expression")
+                                            (= $2 "expression"))))
+                             attrset-name
+                               (-?> select-expression
+                                    (find-child
+                                      #(and (= ($1:type) "variable_expression")
+                                            (= $2 "expression")))
+                                    (vim.treesitter.get_node_text bufnr))
+                             attr-name
+                               (-?> select-expression
+                                    (find-child
+                                      #(and (= ($1:type) "attrpath")
+                                            (= $2 "attrpath")))
+                                    (vim.treesitter.get_node_text bufnr))]
+                         (when (and attrset-name attr-name)
+                           ;;; Mark for search up
+                           [{:name attr-name
+                             :?from attrset-name}]))
             expr (or string-expr
-                     var-expr)]
+                     var-expr
+                     attr-expr)]
         (tset bindings attr-name expr))
       ;;; (Plain) inherit bindings
       "inherit"
       (let [attrs (find-child
+                    binding
                     #(and (= ($1:type) "inherited_attrs")
-                          (= $2 "attrs"))
-                    binding)]
+                          (= $2 "attrs")))]
         (each [node node-name (attrs:iter_children)]
           (when (and (= (node:type) "identifier")
                      (= node-name "attr"))
@@ -193,6 +241,7 @@
   (local opts (or opts {}))
   (local {: bufnr
           : bounder
+          : from
           : identifier
           : depth
           : depth-limit}
@@ -228,10 +277,17 @@
   ;;; NOTE: we would want to recursing on the same level (bounder)
   ;;;       if we are on `let_expression` and `rec_attrset_expression`
   ;;;       because they are are recursive in nature
-  (local recurse? (not= (-> bounder
+  ;;; NOTE: we also want to recurse on plain old `attrset_expression`
+  ;;;       when it's right under a function (`finalAttrs` pattern)
+  ;;;       but only for bindings having the same `from`
+  ;;;       (all of this is handled down, not here, because second
+  ;;;        `from` depends on the binding itself, it local by nature)
+  (local recurse? (case (-> bounder
                             (: :parent)
                             (: :type))
-                        "attrset_expression"))
+                     (where (or "attrset_expression"))     false
+                     (where (or "let_expression"
+                                "rec_attrset_expression")) true))
 
   ;;; Early return if bounder is nil
   (when (not bounder)
@@ -259,20 +315,39 @@
     ;;;    - or doens't have a `binding_set`
     (while (and parent-bounder
                 (or (and (not= (parent-bounder:type) "rec_attrset_expression")
-                         (not= (parent-bounder:type) "let_expression"))
+                         (not= (parent-bounder:type) "let_expression")
+                         (and (not= (parent-bounder:type) "attrset_expression")
+                              (-?> (parent-bounder:parent)
+                                   (: :type)
+                                   (not= "function_expression"))))
                     (not (find-child
-                           #(= ($:type) "binding_set")
-                           parent-bounder))))
+                           parent-bounder
+                           #(= ($:type) "binding_set")))))
       (set parent-bounder (parent-bounder:parent)))
+
+    ;;; If normal `attrset_expression`, annotate where it came from
+    (var from nil)
+    (when (-?> parent-bounder
+               (: :parent)
+               (: :type)
+               (= "function_expression"))
+      (set from
+           (-> parent-bounder
+               (: :parent)
+               (find-child
+                 #(and (= ($1:type) "identifier")
+                       (= $2 "universal")))
+               (vim.treesitter.get_node_text bufnr))))
 
     ;;; If found, step down into its binding_set
     (when parent-bounder
       (set parent-bounder
            (find-child
-             #(= ($:type) "binding_set")
-             parent-bounder)))
+             parent-bounder
+             #(= ($:type) "binding_set"))))
 
-    parent-bounder)
+    {: from
+     : parent-bounder})
 
   ;;; Find all local bindings
   (local bindings (find-all-local-bindings {: bufnr : bounder}))
@@ -290,10 +365,10 @@
                     {: ?interp : node : value}
                     {: ?interp : node : value}
                     ;;; Variable reference - Recurse for name
-                    {: ?interp : name}
-                    (let [parent-bounder (find-parent-bounder)
+                    {: ?interp : name : ?from}
+                    (let [{:from next-from : parent-bounder} (find-parent-bounder)
                           ;;; NOTE: `recurse?` matters here
-                          next-bounder (if recurse?
+                          next-bounder (if (or recurse? (= from ?from))
                                            bounder
                                            parent-bounder)]
                       (if next-bounder
@@ -301,6 +376,7 @@
                         (let [resolved (try-get-binding-value
                                          {: bufnr
                                           :bounder next-bounder
+                                          :from next-from
                                           :identifier name
                                           :depth (+ depth 1)
                                           : depth-limit})]
@@ -321,12 +397,13 @@
          ;;; Not found on this level - Recurse up for same
          ;;; NOTE: unlike with variable reference
          ;;;       here we just recurse upwards
-         (let [parent-bounder (find-parent-bounder)]
+         (let [{: parent-bounder : from} (find-parent-bounder)]
            (if parent-bounder
              ;; Search upwards
              (try-get-binding-value
                {: bufnr
                 :bounder parent-bounder
+                : from
                 : identifier
                 :depth (+ depth 1)
                 : depth-limit})
@@ -367,8 +444,8 @@
         ;;; Classic binding
         "binding"
         (let [attr      (find-child
-                          #(= ($1:type) "attrpath")
-                          binding)
+                          binding
+                          #(= ($1:type) "attrpath"))
               attr-name (when attr
                           (vim.treesitter.get_node_text
                             attr
@@ -378,17 +455,17 @@
         ;;; (Plain) inherit bindings
         "inherit"
         (let [attrs (find-child
+                      binding
                       #(and (= ($1:type) "inherited_attrs")
-                            (= $2 "attrs"))
-                      binding)
+                            (= $2 "attrs")))
               attr  (find-child
+                      attrs
                       #(and (= ($1:type) "identifier")
                             (= $2 "attr")
                             (= (vim.treesitter.get_node_text
                                  $1
                                  bufnr)
-                               name))
-                      attrs)]
+                               name)))]
           attr))))
 
   (. bindings 1))

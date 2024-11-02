@@ -38,12 +38,12 @@
           seq))
   res)
 
-(fn find-child [p? node]
+(fn find-child [node p?]
   (each [child ?name (node:iter_children)]
     (when (p? child ?name)
       (lua "return child"))))
 
-(fn find-children [p? node]
+(fn find-children [node p?]
   (icollect [child ?name (node:iter_children)]
     (when (p? child ?name)
       child)))

@@ -38,12 +38,12 @@
 
  return res end
 
- local function find_child(p_3f, node)
+ local function find_child(node, p_3f)
  for child, _3fname in node:iter_children() do
  if p_3f(child, _3fname) then
  return child else end end return nil end
 
- local function find_children(p_3f, node)
+ local function find_children(node, p_3f)
  local tbl_21_auto = {} local i_22_auto = 0 for child, _3fname in node:iter_children() do local val_23_auto
  if p_3f(child, _3fname) then
  val_23_auto = child else val_23_auto = nil end if (nil ~= val_23_auto) then i_22_auto = (i_22_auto + 1) tbl_21_auto[i_22_auto] = val_23_auto else end end return tbl_21_auto end

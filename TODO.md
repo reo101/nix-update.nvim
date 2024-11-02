@@ -1,6 +1,6 @@
-- Parse literals (bools and numbers, maybe only under `toString`)
-- Research `--arg` option for `nurl` (pass all fetcher args)
-- Support `mkDerivation` calls with a function
+- [ ] Parse literals (bools and numbers, maybe only under `toString`)
+- [ ] Research `--arg` option for `nurl` (pass all fetcher args)
+- [x] Support `mkDerivation` calls with a function
 
 ```nix
 stdenv.mkDerivation (finalAttrs: {
@@ -14,8 +14,10 @@ stdenv.mkDerivation (finalAttrs: {
   };
 })
 ```
+  - [ ] Deduplicate code in `interpolation` case of bindings
+  - [ ] Document in README.md
 
-- Support `dream2nix` `config` references (similar to `finalAttrs`)
+- [ ] Support `dream2nix` `config` references (similar to `finalAttrs`)
 
 ```nix
 { config
