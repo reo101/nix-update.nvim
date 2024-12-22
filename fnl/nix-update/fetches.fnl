@@ -514,7 +514,13 @@
          (let [fetches-query (gen-fetches-query)]
            ;;; For each query match
            (icollect [_pattern matcher _metadata
-                      (fetches-query:iter_matches root bufnr 0 -1)]
+                      (fetches-query:iter_matches
+                        root
+                        bufnr
+                        0
+                        -1
+                        ;; NOTE: stable `nvim` compatability
+                        {:all true})]
              ;;; Construct a table from ...
              (do
                (local res {})

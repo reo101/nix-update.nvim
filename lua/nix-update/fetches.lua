@@ -513,7 +513,7 @@
  local found_fetches
  do local fetches_query = gen_fetches_query()
 
- local tbl_21_auto = {} local i_22_auto = 0 for _pattern, matcher, _metadata in fetches_query:iter_matches(root, bufnr0, 0, -1) do local val_23_auto
+ local tbl_21_auto = {} local i_22_auto = 0 for _pattern, matcher, _metadata in fetches_query:iter_matches(root, bufnr0, 0, -1, {all = true}) do local val_23_auto
 
 
  do
