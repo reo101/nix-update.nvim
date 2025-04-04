@@ -11,21 +11,21 @@
 
 
  local function keys(tbl)
- local tbl_21_auto = {} local i_22_auto = 0 for k, _ in pairs(tbl) do
- local val_23_auto = k if (nil ~= val_23_auto) then i_22_auto = (i_22_auto + 1) tbl_21_auto[i_22_auto] = val_23_auto else end end return tbl_21_auto end
+ local tbl_21_ = {} local i_22_ = 0 for k, _ in pairs(tbl) do
+ local val_23_ = k if (nil ~= val_23_) then i_22_ = (i_22_ + 1) tbl_21_[i_22_] = val_23_ else end end return tbl_21_ end
 
- local function map(f, tbl) local tbl_16_auto = {}
+ local function map(f, tbl) local tbl_16_ = {}
  for k, v in pairs(tbl) do
- local k_17_auto, v_18_auto = f({k = k, v = v}) if ((k_17_auto ~= nil) and (v_18_auto ~= nil)) then tbl_16_auto[k_17_auto] = v_18_auto else end end return tbl_16_auto end
+ local k_17_, v_18_ = f({k = k, v = v}) if ((k_17_ ~= nil) and (v_18_ ~= nil)) then tbl_16_[k_17_] = v_18_ else end end return tbl_16_ end
 
  local function imap(f, seq)
- local tbl_21_auto = {} local i_22_auto = 0 for k, v in ipairs(seq) do
- local val_23_auto = f({k = k, v = v}) if (nil ~= val_23_auto) then i_22_auto = (i_22_auto + 1) tbl_21_auto[i_22_auto] = val_23_auto else end end return tbl_21_auto end
+ local tbl_21_ = {} local i_22_ = 0 for k, v in ipairs(seq) do
+ local val_23_ = f({k = k, v = v}) if (nil ~= val_23_) then i_22_ = (i_22_ + 1) tbl_21_[i_22_] = val_23_ else end end return tbl_21_ end
 
  local function filter(p_3f, seq)
- local tbl_21_auto = {} local i_22_auto = 0 for k, v in ipairs(seq) do local val_23_auto
+ local tbl_21_ = {} local i_22_ = 0 for k, v in ipairs(seq) do local val_23_
  if p_3f({k = k, v = v}) then
- val_23_auto = v else val_23_auto = nil end if (nil ~= val_23_auto) then i_22_auto = (i_22_auto + 1) tbl_21_auto[i_22_auto] = val_23_auto else end end return tbl_21_auto end
+ val_23_ = v else val_23_ = nil end if (nil ~= val_23_) then i_22_ = (i_22_ + 1) tbl_21_[i_22_] = val_23_ else end end return tbl_21_ end
 
  local function flatten(seq, _3fres)
  local res = (_3fres or {})
@@ -44,9 +44,9 @@
  return child else end end return nil end
 
  local function find_children(node, p_3f)
- local tbl_21_auto = {} local i_22_auto = 0 for child, _3fname in node:iter_children() do local val_23_auto
+ local tbl_21_ = {} local i_22_ = 0 for child, _3fname in node:iter_children() do local val_23_
  if p_3f(child, _3fname) then
- val_23_auto = child else val_23_auto = nil end if (nil ~= val_23_auto) then i_22_auto = (i_22_auto + 1) tbl_21_auto[i_22_auto] = val_23_auto else end end return tbl_21_auto end
+ val_23_ = child else val_23_ = nil end if (nil ~= val_23_) then i_22_ = (i_22_ + 1) tbl_21_[i_22_] = val_23_ else end end return tbl_21_ end
 
  local function missing_keys(tbl, keys0)
  local function _13_(_12_) local key = _12_["v"]

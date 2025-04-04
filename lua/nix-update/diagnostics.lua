@@ -53,7 +53,7 @@
  return nil else end
 
  local diagnostics
- do local tbl_21_auto = {} local i_22_auto = 0 for key, value in pairs(data) do local val_23_auto
+ do local tbl_21_ = {} local i_22_ = 0 for key, value in pairs(data) do local val_23_
  do
 
 
@@ -80,7 +80,7 @@
 
 
 
- val_23_auto = {lnum = start_row, col = start_col, severity = severity, message = message, source = "NixUpdate"} end if (nil ~= val_23_auto) then i_22_auto = (i_22_auto + 1) tbl_21_auto[i_22_auto] = val_23_auto else end end diagnostics = tbl_21_auto end
+ val_23_ = {lnum = start_row, col = start_col, severity = severity, message = message, source = "NixUpdate"} end if (nil ~= val_23_) then i_22_ = (i_22_ + 1) tbl_21_[i_22_] = val_23_ else end end diagnostics = tbl_21_ end
 
 
 
