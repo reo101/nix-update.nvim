@@ -14,6 +14,7 @@
         : imap
         : flatten
         : find-child
+        : find-children
         : coords
         : call-command}
        (require :nix-update.utils))
@@ -312,7 +313,7 @@
     ;;;    - neither a:
     ;;;      - `rec_attrset_expression`
     ;;;      - `let_expression`
-    ;;;    - or doens't have a `binding_set`
+    ;;;    - or doesn't have a `binding_set`
     (while (and parent-bounder
                 (or (and (not= (parent-bounder:type) "rec_attrset_expression")
                          (not= (parent-bounder:type) "let_expression")
@@ -327,17 +328,42 @@
 
     ;;; If normal `attrset_expression`, annotate where it came from
     (var from nil)
+    (var only-for nil)
     (when (-?> parent-bounder
                (: :parent)
                (: :type)
                (= "function_expression"))
-      (set from
-           (-> parent-bounder
-               (: :parent)
-               (find-child
-                 #(and (= ($1:type) "identifier")
-                       (= $2 "universal")))
-               (vim.treesitter.get_node_text bufnr))))
+      ;; NOTE: name of `config`-like attrset argument
+      ;;       or `nil` if its destructured
+      (local parent (parent-bounder:parent))
+      ;; param: ...
+      (local universal-parameter
+             (-> parent
+                 (find-child
+                   #(and (= ($1:type) "identifier")
+                         (= $2 "universal")))))
+      ;; { a, b, c ? 5 }: ...
+      ;; NOTE: formals with default values are ignored
+      (local formals
+             (-> parent
+                 (find-child
+                   #(and (= ($1:type) "formals")
+                         (= $2 "formals")))
+                 (find-children
+                   #(and (= ($1:type) "formal")
+                         (= $2 "formal")
+                         (= (find-child $1 #(= $2 "default"))
+                            nil)))
+                 vim.iter
+                 (: :map #(find-child $1 #(= $2 "name")))
+                 (: :map #(vim.treesitter.get_node_text $ bufnr))
+                 (: :totable)))
+      (if (not= universal-parameter nil)
+          ;; Found a universal parameter
+          (set from (vim.treesitter.get_node_text universal-parameter bufnr))
+          ;; else
+          ;; Rely on found formals (can be empty)
+          (set only-for formals)))
 
     ;;; If found, step down into its binding_set
     (when parent-bounder
@@ -346,7 +372,13 @@
              parent-bounder
              #(= ($:type) "binding_set"))))
 
+    ;; NOTE: a `nil` `from` means that either we're not working
+    ;;       with a `function_expression` binder or that we are
+    ;;       but it doesn't have a `universal` parameter (catch-all)
+    ;;       and instead does destructuring which store the bound attributes
+    ;;       in `only-for` instead
     {: from
+     : only-for
      : parent-bounder})
 
   ;;; Find all local bindings
@@ -366,11 +398,30 @@
                     {: ?interp : node : value}
                     ;;; Variable reference - Recurse for name
                     {: ?interp : name : ?from}
-                    (let [{:from next-from : parent-bounder} (find-parent-bounder)
+                    (let [{:from next-from
+                           : only-for
+                           : parent-bounder} (find-parent-bounder)
                           ;;; NOTE: `recurse?` matters here
-                          next-bounder (if (or recurse? (= from ?from))
-                                           bounder
-                                           parent-bounder)]
+                          next-bounder
+                           (if (or recurse?
+                                   ;; TODO: should this be here?
+                                   (and ?from
+                                        (= from ?from)))
+                               bounder
+                               ;; NOTE: not in destructured attrs
+                               ;;       -> directly skip upwards
+                               ;; TODO: somehow carry `only-for` as an arg
+                               (and only-for
+                                    (not (vim.tbl_contains
+                                           only-for
+                                           name)))
+                               (-?> parent-bounder
+                                    (: :parent)
+                                    (: :parent))
+                               ;; else
+                               ;; NOTE: either in destructured attrs
+                               ;;       or a non-recursive binder
+                               parent-bounder)]
                       (if next-bounder
                         ;; Search upwards*
                         (let [resolved (try-get-binding-value
