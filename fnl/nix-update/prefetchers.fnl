@@ -56,7 +56,7 @@
      (fn [{: owner
            : repo
            : rev
-           : ?fetchSubmodules}]
+           : fetchSubmodules}]
        (local cmd "nurl")
 
        (local args (concat ["--json"]
@@ -64,9 +64,7 @@
                            ;; ["--fetcher" "fetchFromGitHub"]
                            [(string.format
                               "--submodules=%s"
-                              (if ?fetchSubmodules
-                                  :true
-                                  :false))]
+                              (or fetchSubmodules :false))]
                            [(string.format
                               "https://www.github.com/%s/%s"
                               owner
@@ -89,16 +87,14 @@
      (fn [{: owner
            : repo
            : rev
-           : ?fetchSubmodules}]
+           : fetchSubmodules}]
        (local cmd "nurl")
 
        (local args (concat ["--json"]
                            ;; ["--fetcher" "fetchFromGitLab"]
                            [(string.format
                               "--submodules=%s"
-                              (if ?fetchSubmodules
-                                  :true
-                                  :false))]
+                              (or fetchSubmodules :false))]
                            [(string.format
                               "https://www.gitlab.com/%s/%s"
                               owner
@@ -154,16 +150,14 @@
     :prefetcher
      (fn [{: url
            : rev
-           : ?fetchSubmodules}]
+           : fetchSubmodules}]
        (local cmd "nurl")
 
        (local args (concat ["--json"]
                            ["--fetcher" "builtins.fetchGit"]
                            [(string.format
                               "--submodules=%s"
-                              (if ?fetchSubmodules
-                                  :true
-                                  :false))]
+                              (or fetchSubmodules :false))]
                            [url]
                            [rev]))
 
