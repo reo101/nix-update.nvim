@@ -112,15 +112,28 @@
       "binding"
       (let [attr        (find-child
                           binding
-                          #(= ($1:type) "attrpath"))
+                          #(and (= ($1:type) "attrpath")
+                                (= $2 "attrpath")))
             attr-name   (when attr
                           (vim.treesitter.get_node_text
                             attr
                             bufnr))
+            ;; NOTE: special case, treat `true`/`false` as strings
+            bool-expr   (let [bool-expr
+                               (find-child
+                                 binding
+                                 #(and (= ($1:type) "variable_expression")
+                                       (= $2 "expression")))]
+                          (when bool-expr
+                            (let [bool-expr-value (vim.treesitter.get_node_text bool-expr bufnr)]
+                              (when (vim.list_contains [:true :false] bool-expr-value)
+                                [{:node bool-expr
+                                  :value bool-expr-value}]))))
             string-expr (let [string-expression
                                (find-child
                                  binding
-                                 #(= ($1:type) "string_expression"))]
+                                 #(and (= ($1:type) "string_expression")
+                                       (= $2 "expression")))]
                           (when string-expression
                             (if
                               (> (string-expression:named_child_count)
@@ -213,6 +226,7 @@
                            [{:name attr-name
                              :?from attrset-name}]))
             expr (or string-expr
+                     bool-expr
                      var-expr
                      attr-expr)]
         (tset bindings attr-name expr))
