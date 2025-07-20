@@ -823,6 +823,40 @@
 
 
 
+ local function notify_update(update)
+ if ((_G.type(update) == "table") and (update.type == "old") and ((_G.type(update.data) == "table") and (nil ~= update.data.bufnr) and (nil ~= update.data["start-row"]) and (nil ~= update.data["start-col"]) and (nil ~= update.data["end-row"]) and (nil ~= update.data["end-col"]) and (nil ~= update.data.replacement))) then local bufnr = update.data.bufnr local start_row = update.data["start-row"] local start_col = update.data["start-col"] local end_row = update.data["end-row"] local end_col = update.data["end-col"] local replacement = update.data.replacement
+
+
+
+
+
+
+
+ return vim.notify(string.format("Replaced text from (%d, %d) to (%d, %d) in buffer %d with %s", start_row, start_col, end_row, end_col, bufnr, vim.inspect(replacement))) elseif ((_G.type(update) == "table") and (update.type == "new") and ((_G.type(update.data) == "table") and (nil ~= update.data.bufnr) and (nil ~= update.data.start) and (nil ~= update.data["end"]) and (nil ~= update.data.replacement))) then local bufnr = update.data.bufnr local start = update.data.start local _end = update.data["end"] local replacement = update.data.replacement
+
+
+
+
+
+
+
+
+
+
+
+
+
+ return vim.notify(string.format("Inserted text at (%d, %d) to (%d, %d) in buffer %d with %s", __fnl_global__start_2drow, __fnl_global__start_2dcol, __fnl_global__end_2drow, __fnl_global__end_2dcol, bufnr, vim.inspect(replacement))) else return nil end end
+
+
+
+
+
+
+
+
+
+
 
  local function prefetch_fetch(opts)
 
@@ -852,8 +886,8 @@
 
  local prefetcher
 
- local _148_ do local t_147_ = config if (nil ~= t_147_) then t_147_ = t_147_["extra-prefetchers"] else end if (nil ~= t_147_) then t_147_ = t_147_[fetch0._fname] else end _148_ = t_147_ end local or_151_ = _148_
- if not or_151_ then local t_152_ = prefetchers if (nil ~= t_152_) then t_152_ = t_152_[fetch0._fname] else end or_151_ = t_152_ end prefetcher = or_151_
+ local _149_ do local t_148_ = config if (nil ~= t_148_) then t_148_ = t_148_["extra-prefetchers"] else end if (nil ~= t_148_) then t_148_ = t_148_[fetch0._fname] else end _149_ = t_148_ end local or_152_ = _149_
+ if not or_152_ then local t_153_ = prefetchers if (nil ~= t_153_) then t_153_ = t_153_[fetch0._fname] else end or_152_ = t_153_ end prefetcher = or_152_
 
 
  if not prefetcher then
@@ -874,15 +908,15 @@
 
 
 
- local function _155_(result)
+ local function _156_(result)
  argument_values0[farg_name] = result return nil end
 
- local function _156_(notfounds)
- return table.insert(notfounds_pairs, {["farg-name"] = farg_name, notfounds = notfounds}) end Result.bimap(fragments_to_value(farg_binding.fragments), _155_, _156_) end
+ local function _157_(notfounds)
+ return table.insert(notfounds_pairs, {["farg-name"] = farg_name, notfounds = notfounds}) end Result.bimap(fragments_to_value(farg_binding.fragments), _156_, _157_) end
 
 
 
- for _, _157_ in ipairs(notfounds_pairs) do local farg_name = _157_["farg-name"] local notfounds = _157_["notfounds"]
+ for _, _158_ in ipairs(notfounds_pairs) do local farg_name = _158_["farg-name"] local notfounds = _158_["notfounds"]
  vim.notify(string.format("Identifiers %s not found while evaluating %s!", vim.inspect(notfounds), farg_name)) end
 
 
@@ -911,7 +945,7 @@
 
 
 
- local function _161_(_160_) local stdout = _160_["stdout"] local stderr = _160_["stderr"]
+ local function _162_(_161_) local stdout = _161_["stdout"] local stderr = _161_["stderr"]
  if (#stdout == 0) then
  cache[fetch0._fwhole] = {bufnr = bufnr0, fetch = fetch0, err = string.format("Oopsie: %s", vim.inspect(stderr))}
 
@@ -924,7 +958,7 @@
 
  return nil else end
 
- cache[fetch0._fwhole] = {bufnr = bufnr0, fetch = fetch0, data = prefetcher.extractor(stdout)} return nil end call_command(prefetcher_cmd, _161_)
+ cache[fetch0._fwhole] = {bufnr = bufnr0, fetch = fetch0, data = prefetcher.extractor(stdout)} return nil end call_command(prefetcher_cmd, _162_)
 
 
 
@@ -936,4 +970,4 @@
 
 
 
- return {["fetches-query-string"] = fetches_query_string, ["gen-fetches-names"] = gen_fetches_names, ["gen-fetches-query"] = gen_fetches_query, ["get-root"] = get_root, ["find-all-local-bindings"] = find_all_local_bindings, ["try-get-binding-value"] = try_get_binding_value, ["fragments-to-value"] = fragments_to_value, ["find-used-fetches"] = find_used_fetches, ["get-fetch-at-cursor"] = get_fetch_at_cursor, ["calculate-updates"] = calculate_updates, ["preview-update"] = preview_update, ["apply-update"] = apply_update, ["prefetch-fetch"] = prefetch_fetch}
+ return {["fetches-query-string"] = fetches_query_string, ["gen-fetches-names"] = gen_fetches_names, ["gen-fetches-query"] = gen_fetches_query, ["get-root"] = get_root, ["find-all-local-bindings"] = find_all_local_bindings, ["try-get-binding-value"] = try_get_binding_value, ["fragments-to-value"] = fragments_to_value, ["find-used-fetches"] = find_used_fetches, ["get-fetch-at-cursor"] = get_fetch_at_cursor, ["calculate-updates"] = calculate_updates, ["preview-update"] = preview_update, ["apply-update"] = apply_update, ["notify-update"] = notify_update, ["prefetch-fetch"] = prefetch_fetch}

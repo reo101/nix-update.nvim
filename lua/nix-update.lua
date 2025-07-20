@@ -1,6 +1,7 @@
  local _local_1_ = require("nix-update.fetches") local calculate_updates = _local_1_["calculate-updates"]
  local preview_update = _local_1_["preview-update"]
  local apply_update = _local_1_["apply-update"]
+ local notify_update = _local_1_["notify-update"]
  local prefetch_fetch = _local_1_["prefetch-fetch"]
 
 
@@ -62,6 +63,7 @@
  vim.notify("Could not prefetch")
  vim.print({data = data, err = err})
  return nil else end
+ vim.notify("Successful prefetch, applying updates...")
  local updates = calculate_updates({bufnr = bufnr, fetch = fetch, ["new-data"] = data})
 
 
@@ -70,6 +72,7 @@
 
 
 
- apply_update(update) end return nil else return nil end end return cache({handler = _5_}) end
+ apply_update(update)
+ notify_update(update) end return nil else return nil end end return cache({handler = _5_}) end
 
  return {setup = setup, prefetch_fetch = prefetch_fetch}

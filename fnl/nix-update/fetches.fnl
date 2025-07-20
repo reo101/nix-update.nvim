@@ -822,6 +822,40 @@
       true
       replacement)))
 
+;;; Notify about update
+(fn notify-update [update]
+  (match update
+    {:type :old
+     :data {: bufnr
+            : start-row
+            : start-col
+            : end-row
+            : end-col
+            : replacement}}
+    (vim.notify
+      (string.format
+        "Replaced text from (%d, %d) to (%d, %d) in buffer %d with %s"
+        start-row
+        start-col
+        end-row
+        end-col
+        bufnr
+        (vim.inspect replacement)))
+    {:type :new
+     :data {: bufnr
+            : start
+            : end
+            : replacement}}
+    (vim.notify
+      (string.format
+        "Inserted text at (%d, %d) to (%d, %d) in buffer %d with %s"
+        start-row
+        start-col
+        end-row
+        end-col
+        bufnr
+        (vim.inspect replacement)))))
+
 ;;; Prefetch given fetch
 ;;; store its results in the global state table
 (fn prefetch-fetch [opts]
@@ -948,4 +982,5 @@
  : calculate-updates
  : preview-update
  : apply-update
+ : notify-update
  : prefetch-fetch}

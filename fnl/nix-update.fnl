@@ -1,6 +1,7 @@
 (local {: calculate-updates
         : preview-update
         : apply-update
+        : notify-update
         : prefetch-fetch}
        (require "nix-update.fetches"))
 
@@ -62,6 +63,7 @@
             (vim.notify "Could not prefetch")
             (vim.print {: data : err})
             (lua "return nil"))
+          (vim.notify "Successful prefetch, applying updates...")
           (local updates (calculate-updates
                            {: bufnr
                             : fetch
@@ -70,7 +72,8 @@
             ;;; TODO: fix preview-update (conceal/anticonceal)
             ;;
             ;; (preview-update update)
-            (apply-update update))))}))
+            (apply-update update)
+            (notify-update update))))}))
 
 {: setup
  :prefetch_fetch prefetch-fetch}
