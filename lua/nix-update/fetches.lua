@@ -328,11 +328,12 @@
 
 
 
+
  while true do local and_67_ = parent_bounder
  if and_67_ then local and_68_ = (parent_bounder:type() ~= "rec_attrset_expression") and (parent_bounder:type() ~= "let_expression")
 
- if and_68_ then local and_69_ = (parent_bounder:type() ~= "attrset_expression")
- if and_69_ then local tmp_3_ = parent_bounder:parent() if (nil ~= tmp_3_) then local tmp_3_0 = tmp_3_:type() if (nil ~= tmp_3_0) then and_69_ = (tmp_3_0 ~= "function_expression") else and_69_ = nil end else and_69_ = nil end end and_68_ = and_69_ end local or_74_ = and_68_
+ if and_68_ then local and_69_ = (parent_bounder:type() == "attrset_expression")
+ if and_69_ then local tmp_3_ = parent_bounder:parent() if (nil ~= tmp_3_) then local tmp_3_0 = tmp_3_:type() if (nil ~= tmp_3_0) then and_69_ = (tmp_3_0 == "function_expression") else and_69_ = nil end else and_69_ = nil end end and_68_ = not and_69_ end local or_74_ = and_68_
 
 
  if not or_74_ then
@@ -343,7 +344,12 @@
 
  local from0 = nil
  local only_for = nil
- local _76_ if (nil ~= parent_bounder) then local tmp_3_ = parent_bounder:parent() if (nil ~= tmp_3_) then local tmp_3_0 = tmp_3_:type() if (nil ~= tmp_3_0) then _76_ = (tmp_3_0 == "function_expression") else _76_ = nil end else _76_ = nil end else _76_ = nil end if _76_ then local parent = parent_bounder:parent()
+
+
+ local _76_ if (nil ~= parent_bounder) then local tmp_3_ = parent_bounder:type() if (nil ~= tmp_3_) then _76_ = (tmp_3_ == "attrset_expression") else _76_ = nil end else _76_ = nil end local and_80_ = _76_
+
+
+ if and_80_ then if (nil ~= parent_bounder) then local tmp_3_ = parent_bounder:parent() if (nil ~= tmp_3_) then local tmp_3_0 = tmp_3_:type() if (nil ~= tmp_3_0) then and_80_ = (tmp_3_0 == "function_expression") else and_80_ = nil end else and_80_ = nil end else and_80_ = nil end end if and_80_ then local parent = parent_bounder:parent()
 
 
 
@@ -354,23 +360,23 @@
  local universal_parameter
 
 
- local function _82_(_241, _242) return ((_241:type() == "identifier") and (_242 == "universal")) end universal_parameter = find_child(parent, _82_)
+ local function _86_(_241, _242) return ((_241:type() == "identifier") and (_242 == "universal")) end universal_parameter = find_child(parent, _86_)
 
 
 
  local formals
 
 
- local function _83_(_241, _242) return ((_241:type() == "formals") and (_242 == "formals")) end
+ local function _87_(_241, _242) return ((_241:type() == "formals") and (_242 == "formals")) end
 
 
- local function _84_(_241, _242) local and_85_ = (_241:type() == "formal") and (_242 == "formal")
+ local function _88_(_241, _242) local and_89_ = (_241:type() == "formal") and (_242 == "formal")
 
- if and_85_ then local function _86_(_2410, _2420) return (_2420 == "default") end and_85_ = (find_child(_241, _86_) == nil) end return and_85_ end
+ if and_89_ then local function _90_(_2410, _2420) return (_2420 == "default") end and_89_ = (find_child(_241, _90_) == nil) end return and_89_ end
 
 
- local function _87_(_241) local function _88_(_2410, _2420) return (_2420 == "name") end return find_child(_241, _88_) end
- local function _89_(_241) return vim.treesitter.get_node_text(_241, bufnr0) end formals = vim.iter(find_children(find_child(parent, _83_), _84_)):map(_87_):map(_89_):totable()
+ local function _91_(_241) local function _92_(_2410, _2420) return (_2420 == "name") end return find_child(_241, _92_) end
+ local function _93_(_241) return vim.treesitter.get_node_text(_241, bufnr0) end formals = vim.iter(find_children(find_child(parent, _87_), _88_)):map(_91_):map(_93_):totable()
 
  if (universal_parameter ~= nil) then
 
@@ -384,7 +390,7 @@
 
 
 
- local function _92_(_241) return (_241:type() == "binding_set") end parent_bounder = find_child(parent_bounder, _92_) else end
+ local function _96_(_241) return (_241:type() == "binding_set") end parent_bounder = find_child(parent_bounder, _96_) else end
 
 
 
@@ -405,16 +411,16 @@
  if binding then
 
  local find_up
- local function _95_(_94_) local fragment = _94_["v"]
+ local function _99_(_98_) local fragment = _98_["v"]
  if ((_G.type(fragment) == "table") and true and (nil ~= fragment.node) and (nil ~= fragment.value)) then local _3finterp = fragment["?interp"] local node = fragment.node local value = fragment.value
 
 
  return {["?interp"] = _3finterp, node = node, value = value} elseif ((_G.type(fragment) == "table") and true and (nil ~= fragment.name) and true) then local _3finterp = fragment["?interp"] local name = fragment.name local _3ffrom = fragment["?from"]
 
 
- local _let_96_ = find_parent_bounder() local next_from = _let_96_["from"]
- local only_for = _let_96_["only-for"]
- local parent_bounder = _let_96_["parent-bounder"] local next_bounder
+ local _let_100_ = find_parent_bounder() local next_from = _let_100_["from"]
+ local only_for = _let_100_["only-for"]
+ local parent_bounder = _let_100_["parent-bounder"] local next_bounder
 
 
  if (recurse_3f or (_3ffrom and (from == _3ffrom))) then
@@ -454,7 +460,7 @@
  return {notfound = name} end elseif ((_G.type(fragment) == "table") and (nil ~= fragment.notfound)) then local notfound = fragment.notfound
 
 
- return {notfound = notfound} else return nil end end find_up = _95_
+ return {notfound = notfound} else return nil end end find_up = _99_
 
 
  local full_fragments = imap(find_up, binding)
@@ -462,7 +468,7 @@
 
 
 
- local _let_103_ = find_parent_bounder() local parent_bounder = _let_103_["parent-bounder"] local from0 = _let_103_["from"]
+ local _let_107_ = find_parent_bounder() local parent_bounder = _let_107_["parent-bounder"] local from0 = _let_107_["from"]
  if parent_bounder then
 
  final_binding = try_get_binding_value({bufnr = bufnr0, bounder = parent_bounder, from = from0, identifier = identifier, depth = (depth0 + 1), ["depth-limit"] = depth_limit0}) else
@@ -505,27 +511,27 @@
  local bindings
 
  do local tbl_21_ = {} local i_22_ = 0 for binding, _ in node:iter_children() do local val_23_
- do local _109_ = binding:type() if (_109_ == "binding") then
+ do local _113_ = binding:type() if (_113_ == "binding") then
 
 
  local attr
 
- local function _110_(_241) return (_241:type() == "attrpath") end attr = find_child(binding, _110_) local attr_name
+ local function _114_(_241) return (_241:type() == "attrpath") end attr = find_child(binding, _114_) local attr_name
  if attr then
  attr_name = vim.treesitter.get_node_text(attr, bufnr) else attr_name = nil end
 
 
  if (attr_name == name) then
- val_23_ = binding else val_23_ = nil end elseif (_109_ == "inherit") then
+ val_23_ = binding else val_23_ = nil end elseif (_113_ == "inherit") then
 
 
  local attrs
 
- local function _113_(_241, _242) return ((_241:type() == "inherited_attrs") and (_242 == "attrs")) end attrs = find_child(binding, _113_) local attr
+ local function _117_(_241, _242) return ((_241:type() == "inherited_attrs") and (_242 == "attrs")) end attrs = find_child(binding, _117_) local attr
 
 
 
- local function _114_(_241, _242) return ((_241:type() == "identifier") and (_242 == "attr") and (vim.treesitter.get_node_text(_241, bufnr) == name)) end attr = find_child(attrs, _114_)
+ local function _118_(_241, _242) return ((_241:type() == "identifier") and (_242 == "attr") and (vim.treesitter.get_node_text(_241, bufnr) == name)) end attr = find_child(attrs, _118_)
 
 
 
@@ -594,7 +600,7 @@
  do local capture_id = fetches_query.captures[id]
 
 
- local function _121_() if (capture_id == "_fname") then
+ local function _125_() if (capture_id == "_fname") then
 
 
  return vim.treesitter.get_node_text(node, bufnr0) elseif (capture_id == "_fargs") then local tbl_16_0 = {}
@@ -617,7 +623,7 @@
 
 
 
- return node else return nil end end k_17_, v_18_ = capture_id, _121_() end if ((k_17_ ~= nil) and (v_18_ ~= nil)) then tbl_16_[k_17_] = v_18_ else end end end
+ return node else return nil end end k_17_, v_18_ = capture_id, _125_() end if ((k_17_ ~= nil) and (v_18_ ~= nil)) then tbl_16_[k_17_] = v_18_ else end end end
  val_23_ = res end if (nil ~= val_23_) then i_22_ = (i_22_ + 1) tbl_21_[i_22_] = val_23_ else end end found_fetches = tbl_21_ end
 
 
@@ -637,7 +643,7 @@
  local found_fetches = find_used_fetches({bufnr = bufnr0})
 
 
- local _local_124_ = vim.fn.getcursorcharpos() local _ = _local_124_[1] local cursor_row = _local_124_[2] local cursor_col = _local_124_[3] local _0 = _local_124_[4] local _1 = _local_124_[5]
+ local _local_128_ = vim.fn.getcursorcharpos() local _ = _local_128_[1] local cursor_row = _local_128_[2] local cursor_col = _local_128_[3] local _0 = _local_128_[4] local _1 = _local_128_[5]
 
 
  for _2, fetch in ipairs(found_fetches) do
@@ -658,7 +664,7 @@
 
  local updates = {}
  for key, new_value in pairs(new_data) do
- local existing do local t_126_ = fetch if (nil ~= t_126_) then t_126_ = t_126_._fargs else end if (nil ~= t_126_) then t_126_ = t_126_[key] else end if (nil ~= t_126_) then t_126_ = t_126_.fragments else end existing = t_126_ end
+ local existing do local t_130_ = fetch if (nil ~= t_130_) then t_130_ = t_130_._fargs else end if (nil ~= t_130_) then t_130_ = t_130_[key] else end if (nil ~= t_130_) then t_130_ = t_130_.fragments else end existing = t_130_ end
  if existing then local i_fragment = 1 local i_new_value = 1 local short_circuit_3f = false
 
 
@@ -688,7 +694,7 @@
 
 
 
- local _local_130_ = coords({bufnr = bufnr, node = fragment_node}) local start_row = _local_130_["start-row"] local start_col = _local_130_["start-col"] local end_row = _local_130_["end-row"] local end_col = _local_130_["end-col"]
+ local _local_134_ = coords({bufnr = bufnr, node = fragment_node}) local start_row = _local_134_["start-row"] local start_col = _local_134_["start-col"] local end_row = _local_134_["end-row"] local end_col = _local_134_["end-col"]
 
  table.insert(updates, {type = "old", data = {bufnr = bufnr, ["start-row"] = start_row, ["start-col"] = start_col, ["end-row"] = end_row, ["end-col"] = end_col, replacement = {string.sub(new_value, i_new_value)}}}) short_circuit_3f = true else
 
@@ -709,11 +715,11 @@
  local last_fragment__3finterp = last_fragment["?interp"]
  local last_fragment_node = last_fragment["node"]
 
- local _local_131_ = coords({bufnr = bufnr, node = (fragment__3finterp or fragment_node)}) local start_row = _local_131_["start-row"] local start_col = _local_131_["start-col"]
+ local _local_135_ = coords({bufnr = bufnr, node = (fragment__3finterp or fragment_node)}) local start_row = _local_135_["start-row"] local start_col = _local_135_["start-col"]
 
 
 
- local _local_132_ = coords({bufnr = bufnr, node = (last_fragment__3finterp or last_fragment_node)}) local end_row = _local_132_["end-row"] local end_col = _local_132_["end-col"]
+ local _local_136_ = coords({bufnr = bufnr, node = (last_fragment__3finterp or last_fragment_node)}) local end_row = _local_136_["end-row"] local end_col = _local_136_["end-col"]
 
 
 
@@ -728,7 +734,7 @@
 
 
 
- local _let_134_ = coords({bufnr = bufnr, node = fetch._fwhole}) local end_row = _let_134_["end-row"] local end_col = _let_134_["end-col"]
+ local _let_138_ = coords({bufnr = bufnr, node = fetch._fwhole}) local end_row = _let_138_["end-row"] local end_col = _let_138_["end-col"]
  table.insert(updates, {type = "new", data = {bufnr = bufnr, start = end_row, ["end"] = end_row, replacement = {string.format("%s%s = \"%s\";", vim.fn["repeat"](" ", ((end_col - 1) + vim.bo[bufnr].shiftwidth)), key, new_value)}}}) end end
 
 
@@ -770,8 +776,8 @@
 
 
 
- local _136_ do local tbl_21_ = {} local i_22_ = 0 for _, line in ipairs(replacement) do
- local val_23_ = {line, "DiffAdd"} if (nil ~= val_23_) then i_22_ = (i_22_ + 1) tbl_21_[i_22_] = val_23_ else end end _136_ = tbl_21_ end return vim.api.nvim_buf_set_extmark(bufnr, namespace, start_row, start_col, {end_row = end_row, end_col = end_col, hl_mode = "replace", virt_text = _136_, virt_text_pos = "overlay"}) elseif ((_G.type(update) == "table") and (update.type == "new") and ((_G.type(update.data) == "table") and (nil ~= update.data.bufnr) and (nil ~= update.data.start) and (nil ~= update.data.replacement))) then local bufnr = update.data.bufnr local start = update.data.start local replacement = update.data.replacement
+ local _140_ do local tbl_21_ = {} local i_22_ = 0 for _, line in ipairs(replacement) do
+ local val_23_ = {line, "DiffAdd"} if (nil ~= val_23_) then i_22_ = (i_22_ + 1) tbl_21_[i_22_] = val_23_ else end end _140_ = tbl_21_ end return vim.api.nvim_buf_set_extmark(bufnr, namespace, start_row, start_col, {end_row = end_row, end_col = end_col, hl_mode = "replace", virt_text = _140_, virt_text_pos = "overlay"}) elseif ((_G.type(update) == "table") and (update.type == "new") and ((_G.type(update.data) == "table") and (nil ~= update.data.bufnr) and (nil ~= update.data.start) and (nil ~= update.data.replacement))) then local bufnr = update.data.bufnr local start = update.data.start local replacement = update.data.replacement
 
 
 
@@ -783,8 +789,8 @@
 
 
 
- local _138_ do local tbl_21_ = {} local i_22_ = 0 for _, line in ipairs(replacement) do
- local val_23_ = {{line, "DiffAdd"}} if (nil ~= val_23_) then i_22_ = (i_22_ + 1) tbl_21_[i_22_] = val_23_ else end end _138_ = tbl_21_ end return vim.api.nvim_buf_set_extmark(bufnr, namespace, start, 0, {virt_lines = _138_, virt_lines_above = true}) else return nil end end
+ local _142_ do local tbl_21_ = {} local i_22_ = 0 for _, line in ipairs(replacement) do
+ local val_23_ = {{line, "DiffAdd"}} if (nil ~= val_23_) then i_22_ = (i_22_ + 1) tbl_21_[i_22_] = val_23_ else end end _142_ = tbl_21_ end return vim.api.nvim_buf_set_extmark(bufnr, namespace, start, 0, {virt_lines = _142_, virt_lines_above = true}) else return nil end end
 
 
 
@@ -846,8 +852,8 @@
 
  local prefetcher
 
- local _144_ do local t_143_ = config if (nil ~= t_143_) then t_143_ = t_143_["extra-prefetchers"] else end if (nil ~= t_143_) then t_143_ = t_143_[fetch0._fname] else end _144_ = t_143_ end local or_147_ = _144_
- if not or_147_ then local t_148_ = prefetchers if (nil ~= t_148_) then t_148_ = t_148_[fetch0._fname] else end or_147_ = t_148_ end prefetcher = or_147_
+ local _148_ do local t_147_ = config if (nil ~= t_147_) then t_147_ = t_147_["extra-prefetchers"] else end if (nil ~= t_147_) then t_147_ = t_147_[fetch0._fname] else end _148_ = t_147_ end local or_151_ = _148_
+ if not or_151_ then local t_152_ = prefetchers if (nil ~= t_152_) then t_152_ = t_152_[fetch0._fname] else end or_151_ = t_152_ end prefetcher = or_151_
 
 
  if not prefetcher then
@@ -868,15 +874,15 @@
 
 
 
- local function _151_(result)
+ local function _155_(result)
  argument_values0[farg_name] = result return nil end
 
- local function _152_(notfounds)
- return table.insert(notfounds_pairs, {["farg-name"] = farg_name, notfounds = notfounds}) end Result.bimap(fragments_to_value(farg_binding.fragments), _151_, _152_) end
+ local function _156_(notfounds)
+ return table.insert(notfounds_pairs, {["farg-name"] = farg_name, notfounds = notfounds}) end Result.bimap(fragments_to_value(farg_binding.fragments), _155_, _156_) end
 
 
 
- for _, _153_ in ipairs(notfounds_pairs) do local farg_name = _153_["farg-name"] local notfounds = _153_["notfounds"]
+ for _, _157_ in ipairs(notfounds_pairs) do local farg_name = _157_["farg-name"] local notfounds = _157_["notfounds"]
  vim.notify(string.format("Identifiers %s not found while evaluating %s!", vim.inspect(notfounds), farg_name)) end
 
 
@@ -905,7 +911,7 @@
 
 
 
- local function _157_(_156_) local stdout = _156_["stdout"] local stderr = _156_["stderr"]
+ local function _161_(_160_) local stdout = _160_["stdout"] local stderr = _160_["stderr"]
  if (#stdout == 0) then
  cache[fetch0._fwhole] = {bufnr = bufnr0, fetch = fetch0, err = string.format("Oopsie: %s", vim.inspect(stderr))}
 
@@ -918,7 +924,7 @@
 
  return nil else end
 
- cache[fetch0._fwhole] = {bufnr = bufnr0, fetch = fetch0, data = prefetcher.extractor(stdout)} return nil end call_command(prefetcher_cmd, _157_)
+ cache[fetch0._fwhole] = {bufnr = bufnr0, fetch = fetch0, data = prefetcher.extractor(stdout)} return nil end call_command(prefetcher_cmd, _161_)
 
 
 

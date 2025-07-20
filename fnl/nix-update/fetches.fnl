@@ -78,7 +78,7 @@
     (tree:root)))
 
 ;;; Find all local bindings
-;;; NOTE: `{: ?interp : name : ?from}` -> name of referenced variable 
+;;; NOTE: `{: ?interp : name : ?from}` -> name of referenced variable
 ;;;                                       (optionally from specific attrset)
 ;;;       `{: ?interp : node : value}` -> node + value of found definition
 ;;;       `{: notfound}`               -> not found
@@ -327,14 +327,15 @@
     ;;;    - neither a:
     ;;;      - `rec_attrset_expression`
     ;;;      - `let_expression`
+    ;;;      - `attrset_expression` just under a `function_expression`
     ;;;    - or doesn't have a `binding_set`
     (while (and parent-bounder
                 (or (and (not= (parent-bounder:type) "rec_attrset_expression")
                          (not= (parent-bounder:type) "let_expression")
-                         (and (not= (parent-bounder:type) "attrset_expression")
-                              (-?> (parent-bounder:parent)
-                                   (: :type)
-                                   (not= "function_expression"))))
+                         (not (and (= (parent-bounder:type) "attrset_expression")
+                                   (-?> (parent-bounder:parent)
+                                        (: :type)
+                                        (= "function_expression")))))
                     (not (find-child
                            parent-bounder
                            #(= ($:type) "binding_set")))))
@@ -343,10 +344,15 @@
     ;;; If normal `attrset_expression`, annotate where it came from
     (var from nil)
     (var only-for nil)
-    (when (-?> parent-bounder
-               (: :parent)
-               (: :type)
-               (= "function_expression"))
+
+    ;; NOTE: Special handling of "just under function" `attrset_expression`s
+    (when (and (-?> parent-bounder
+                    (: :type)
+                    (= "attrset_expression"))
+               (-?> parent-bounder
+                    (: :parent)
+                    (: :type)
+                    (= "function_expression")))
       ;; NOTE: name of `config`-like attrset argument
       ;;       or `nil` if its destructured
       (local parent (parent-bounder:parent))
