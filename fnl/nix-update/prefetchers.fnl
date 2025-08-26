@@ -1,6 +1,9 @@
 (local {: prefetcher-mt}
        (require :nix-update.utils))
 
+(local {: concat-two}
+       (require "nix-update.utils"))
+
 (macro concat [...]
   (fn all [p? tbl]
     (each [k v (pairs tbl)]
@@ -111,13 +114,17 @@
    {:required-cmds [:nix]
     :required-keys [:url]
     :prefetcher
-     (fn [{: url}]
+     (fn [{: url
+           : name}]
        (local cmd "nix")
 
        (local args (concat ["store"]
                            ["prefetch-file"]
                            ["--json"]
                            ["--hash-type" "sha256"]
+                           (if name
+                               ["--name" name]
+                               [])
                            [url]))
 
        {: cmd
