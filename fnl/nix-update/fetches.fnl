@@ -365,19 +365,20 @@
       ;; { a, b, c ? 5 }: ...
       ;; NOTE: formals with default values are ignored
       (local formals
-             (-> parent
-                 (find-child
-                   #(and (= ($1:type) "formals")
-                         (= $2 "formals")))
-                 (find-children
-                   #(and (= ($1:type) "formal")
-                         (= $2 "formal")
-                         (= (find-child $1 #(= $2 "default"))
-                            nil)))
-                 vim.iter
-                 (: :map #(find-child $1 #(= $2 "name")))
-                 (: :map #(vim.treesitter.get_node_text $ bufnr))
-                 (: :totable)))
+             (or (-?> parent
+                      (find-child
+                        #(and (= ($1:type) "formals")
+                              (= $2 "formals")))
+                      (find-children
+                        #(and (= ($1:type) "formal")
+                              (= $2 "formal")
+                              (= (find-child $1 #(= $2 "default"))
+                                 nil)))
+                      vim.iter
+                      (: :map #(find-child $1 #(= $2 "name")))
+                      (: :map #(vim.treesitter.get_node_text $ bufnr))
+                      (: :totable))
+                 []))
       (if (not= universal-parameter nil)
           ;; Found a universal parameter
           (set from (vim.treesitter.get_node_text universal-parameter bufnr))
