@@ -2,6 +2,7 @@
         : preview-update
         : apply-update
         : notify-update
+        : flash-update
         : prefetch-fetch}
        (require "nix-update.fetches"))
 
@@ -47,6 +48,17 @@
     opts
     [:extra-prefetchers])
 
+  ;;; Save update-actions if provided (simple value, not proxied table)
+  (when (?. opts :update-actions)
+    (tset config :update-actions opts.update-actions))
+
+  ;;; Map action names to functions
+  (local action-handlers
+         {:preview preview-update
+          :apply   apply-update
+          :notify  notify-update
+          :flash   flash-update})
+
   ;;; Set cache `on-index` handler
   (cache
     {:handler
@@ -69,11 +81,10 @@
                             : fetch
                             :new-data data}))
           (each [_ update (ipairs updates)]
-            ;;; TODO: fix preview-update (conceal/anticonceal)
-            ;;
-            ;; (preview-update update)
-            (apply-update update)
-            (notify-update update))))}))
+            (each [_ action (ipairs config.update-actions)]
+              (let [handler (?. action-handlers action)]
+                (when handler
+                  (handler update)))))))}))
 
 {: setup
  :prefetch_fetch prefetch-fetch}

@@ -47,8 +47,21 @@ require("nix-update").setup(opts)
 
 This `setup` function accepts the following table:
 
+### Update Actions
+
+| Action    | Description                                                  |
+|-----------|--------------------------------------------------------------|
+| `apply`   | Apply the update to the buffer (modifies the text)           |
+| `flash`   | Briefly highlight the changed region using `vim.hl.range`    |
+| `notify`  | Show a `vim.notify` message with update details              |
+| `preview` | Show the update as virtual text overlay (without applying)   |
+
 ```lua
 require("nix-update").setup({
+  -- Actions to run on each update (in order)
+  -- Default: { "apply", "notify" }
+  update_actions = { "apply", "flash", "notify" },
+
   -- Extra prefetcher commands
   -- table of tables, where each one looks like this:
   extra_prefetcher_cmds = {

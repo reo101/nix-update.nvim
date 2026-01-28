@@ -10,4 +10,7 @@
               (when new
                 (setmetatable value prefetcher-mt)))})
 
+;;; Default update actions: apply the update and notify
+(tset config :update-actions [:apply :notify])
+
 {: config}

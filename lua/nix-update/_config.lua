@@ -12,4 +12,5 @@ local function _2_(new, _key, value)
   end
 end
 config["extra-prefetchers"]({handler = _2_})
+config["update-actions"] = {"apply", "notify"}
 return {config = config}
