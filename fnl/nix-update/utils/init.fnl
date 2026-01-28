@@ -1,14 +1,8 @@
-(local {: any
-        : all
-        : keys
-        : map
-        : imap
-        : filter
-        : flatten
-        : find-child
+(local {: find-child
         : find-children
         : missing-keys
-        : coords}
+        : coords
+        : flatten-fragments}
        (require "nix-update.utils.common"))
 
 (local {: call-command}
@@ -18,17 +12,11 @@
         : create-proxied}
        (require "nix-update.utils.mt"))
 
-{: any
- : all
- : keys
- : map
- : imap
- : filter
- : flatten
- : find-child
+{: find-child
  : find-children
  : missing-keys
  : coords
+ : flatten-fragments
  : prefetcher-mt
  : create-proxied
  : call-command}

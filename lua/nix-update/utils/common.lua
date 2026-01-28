@@ -1,88 +1,4 @@
 -- [nfnl] fnl/nix-update/utils/common.fnl
-local function any(p_3f, tbl)
-  for k, v in pairs(tbl) do
-    if p_3f({k = k, v = v}) then
-      return true
-    else
-    end
-  end
-  return false
-end
-local function all(p_3f, tbl)
-  for k, v in pairs(tbl) do
-    if not p_3f({k = k, v = v}) then
-      return false
-    else
-    end
-  end
-  return true
-end
-local function keys(tbl)
-  local tbl_26_ = {}
-  local i_27_ = 0
-  for k, _ in pairs(tbl) do
-    local val_28_ = k
-    if (nil ~= val_28_) then
-      i_27_ = (i_27_ + 1)
-      tbl_26_[i_27_] = val_28_
-    else
-    end
-  end
-  return tbl_26_
-end
-local function map(f, tbl)
-  local tbl_21_ = {}
-  for k, v in pairs(tbl) do
-    local k_22_, v_23_ = f({k = k, v = v})
-    if ((k_22_ ~= nil) and (v_23_ ~= nil)) then
-      tbl_21_[k_22_] = v_23_
-    else
-    end
-  end
-  return tbl_21_
-end
-local function imap(f, seq)
-  local tbl_26_ = {}
-  local i_27_ = 0
-  for k, v in ipairs(seq) do
-    local val_28_ = f({k = k, v = v})
-    if (nil ~= val_28_) then
-      i_27_ = (i_27_ + 1)
-      tbl_26_[i_27_] = val_28_
-    else
-    end
-  end
-  return tbl_26_
-end
-local function filter(p_3f, seq)
-  local tbl_26_ = {}
-  local i_27_ = 0
-  for k, v in ipairs(seq) do
-    local val_28_
-    if p_3f({k = k, v = v}) then
-      val_28_ = v
-    else
-      val_28_ = nil
-    end
-    if (nil ~= val_28_) then
-      i_27_ = (i_27_ + 1)
-      tbl_26_[i_27_] = val_28_
-    else
-    end
-  end
-  return tbl_26_
-end
-local function flatten(seq, _3fres)
-  local res = (_3fres or {})
-  if vim.tbl_islist(seq) then
-    for _, v in pairs(seq) do
-      flatten(v, res)
-    end
-  else
-    res[(#res + 1)] = seq
-  end
-  return res
-end
 local function find_child(node, p_3f)
   for child, _3fname in node:iter_children() do
     if p_3f(child, _3fname) then
@@ -110,16 +26,31 @@ local function find_children(node, p_3f)
   end
   return tbl_26_
 end
-local function missing_keys(tbl, keys0)
-  local function _13_(_12_)
-    local key = _12_.v
-    local function _15_(_14_)
-      local k = _14_.k
-      return (k == key)
-    end
-    return not any(_15_, tbl)
+local function missing_keys(tbl, required_keys)
+  local tbl_keys
+  local function _4_(k, _)
+    return k
   end
-  return filter(_13_, keys0)
+  tbl_keys = vim.iter(pairs(tbl)):map(_4_):totable()
+  local function _5_(_, key)
+    if vim.islist(key) then
+      local found
+      local function _6_(_0, k)
+        return vim.list_contains(tbl_keys, k)
+      end
+      found = vim.iter(ipairs(key)):any(_6_)
+      if not found then
+        return {["any-of"] = key}
+      else
+        return nil
+      end
+    elseif not vim.list_contains(tbl_keys, key) then
+      return {required = key}
+    else
+      return nil
+    end
+  end
+  return vim.iter(ipairs(required_keys)):map(_5_):totable()
 end
 local function coords(opts)
   local opts0 = (opts or {})
@@ -138,4 +69,19 @@ local function coords(opts)
   local start_row, start_col, end_row, end_col = vim.treesitter.get_node_range(node, bufnr)
   return {["start-row"] = start_row, ["start-col"] = start_col, ["end-row"] = end_row, ["end-col"] = end_col}
 end
-return {any = any, all = all, keys = keys, map = map, imap = imap, filter = filter, flatten = flatten, ["find-child"] = find_child, ["find-children"] = find_children, ["missing-keys"] = missing_keys, coords = coords}
+local function flatten_fragments(tbl)
+  local result = {}
+  local function recurse(t)
+    if ((type(t) == "table") and vim.islist(t)) then
+      for _, v in ipairs(t) do
+        recurse(v)
+      end
+      return nil
+    else
+      return table.insert(result, t)
+    end
+  end
+  recurse(tbl)
+  return result
+end
+return {["find-child"] = find_child, ["find-children"] = find_children, ["missing-keys"] = missing_keys, coords = coords, ["flatten-fragments"] = flatten_fragments}

@@ -1,43 +1,3 @@
-(fn any [p? tbl]
-  (each [k v (pairs tbl)]
-    (when (p? {: k : v})
-      (lua "return true")))
-  false)
-
-(fn all [p? tbl]
-  (each [k v (pairs tbl)]
-    (when (not (p? {: k : v}))
-      (lua "return false")))
-  true)
-
-(fn keys [tbl]
-  (icollect [k _ (pairs tbl)]
-    k))
-
-(fn map [f tbl]
-  (collect [k v (pairs tbl)]
-    (values (f {: k : v}))))
-
-(fn imap [f seq]
-  (icollect [k v (ipairs seq)]
-    (f {: k : v})))
-
-(fn filter [p? seq]
-  (icollect [k v (ipairs seq)]
-    (when (p? {: k : v})
-      v)))
-
-(fn flatten [seq ?res]
-  (local res (or ?res []))
-  (if (vim.tbl_islist seq)
-    (each [_ v (pairs seq)]
-      (flatten v res))
-    ;; else (atom)
-    (tset res
-          (+ (length res) 1)
-          seq))
-  res)
-
 (fn find-child [node p?]
   (each [child ?name (node:iter_children)]
     (when (p? child ?name)
@@ -48,13 +8,36 @@
     (when (p? child ?name)
       child)))
 
-(fn missing-keys [tbl keys]
-  (filter (fn [{:v key}]
-            (not
-              (any (fn [{: k}]
-                     (= k key))
-                   tbl)))
-          keys))
+;;; Check which required keys are missing from tbl
+;;; Supports:
+;;;   :key          - required key (atom)
+;;;   [:a :b]       - any of these (list)
+;;; Returns list of missing requirements with error info
+(fn missing-keys [tbl required-keys]
+  (local tbl-keys
+         (-> tbl
+             pairs
+             vim.iter
+             (: :map (fn [k _] k))
+             (: :totable)))
+  (-> required-keys
+      ipairs
+      vim.iter
+      (: :map
+         (fn [_ key]
+           (if
+             ;; List = any of these must be present
+             (vim.islist key)
+             (let [found (-> key
+                             ipairs
+                             vim.iter
+                             (: :any (fn [_ k] (vim.list_contains tbl-keys k))))]
+               (when (not found)
+                 {:any-of key}))
+             ;; Atom = required key
+             (not (vim.list_contains tbl-keys key))
+             {:required key})))
+      (: :totable)))
 
 (fn coords [opts]
   ;;; Extract opts
@@ -86,14 +69,23 @@
      : end-row
      : end-col}))
 
-{: any
- : all
- : keys
- : map
- : imap
- : filter
- : flatten
- : find-child
+;;; Flatten nested arrays, treating dict-like tables as leaf nodes
+;;; This is needed because vim.iter():flatten() requires all elements to be array-like
+(fn flatten-fragments [tbl]
+  (local result [])
+  (fn recurse [t]
+    (if (and (= (type t) :table)
+             (vim.islist t))
+        ;; Array-like: recurse into elements
+        (each [_ v (ipairs t)]
+          (recurse v))
+        ;; Dict-like or non-table: treat as leaf
+        (table.insert result t)))
+  (recurse tbl)
+  result)
+
+{: find-child
  : find-children
  : missing-keys
- : coords}
+ : coords
+ : flatten-fragments}

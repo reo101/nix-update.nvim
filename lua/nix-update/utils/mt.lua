@@ -1,7 +1,6 @@
 -- [nfnl] fnl/nix-update/utils/mt.fnl
 local _local_1_ = require("nix-update.utils.common")
 local missing_keys = _local_1_["missing-keys"]
-local filter = _local_1_.filter
 local function create_proxied()
   local raw = {}
   local on_index
@@ -39,12 +38,29 @@ local function create_proxied()
   proxy_mt = {__index = _3_, __newindex = _4_, __call = _5_}
   return setmetatable(proxy, proxy_mt)
 end
+local function format_missing_key(m)
+  if ((_G.type(m) == "table") and (nil ~= m["any-of"])) then
+    local keys = m["any-of"]
+    return string.format("one of: %s", table.concat(keys, ", "))
+  elseif ((_G.type(m) == "table") and (nil ~= m.required)) then
+    local key = m.required
+    return key
+  else
+    local _ = m
+    return vim.inspect(m)
+  end
+end
 local prefetcher_mt
-local function _9_(self, args)
+local function _10_(self, args)
   if self["required-keys"] then
     local missing = missing_keys(args, self["required-keys"])
     if (#missing > 0) then
-      vim.notify(string.format("Missing keys: %s", vim.inspect(missing)))
+      local formatted
+      local function _11_(_, m)
+        return format_missing_key(m)
+      end
+      formatted = vim.iter(ipairs(missing)):map(_11_):totable()
+      vim.notify(string.format("Missing keys: %s", table.concat(formatted, "; ")))
       return nil
     else
     end
@@ -52,12 +68,12 @@ local function _9_(self, args)
   end
   if self["required-cmds"] then
     local missing
-    local function _12_(_241)
-      return (vim.fn.executable(_241.v) == 0)
+    local function _14_(_, cmd)
+      return (vim.fn.executable(cmd) == 0)
     end
-    missing = filter(_12_, self["required-cmds"])
+    missing = vim.iter(ipairs(self["required-cmds"])):filter(_14_):totable()
     if (#missing > 0) then
-      vim.notify(string.format("Missing commands: %s", vim.inspect(missing)))
+      vim.notify(string.format("Missing commands: %s", table.concat(missing, ", ")))
       return nil
     else
     end
@@ -65,5 +81,5 @@ local function _9_(self, args)
   end
   return self.prefetcher(args)
 end
-prefetcher_mt = {__call = _9_}
+prefetcher_mt = {__call = _10_}
 return {["create-proxied"] = create_proxied, ["prefetcher-mt"] = prefetcher_mt}

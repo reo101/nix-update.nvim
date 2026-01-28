@@ -10,12 +10,10 @@
 (local {: Result}
        (require :nix-update.utils.fp))
 
-(local {: keys
-        : imap
-        : flatten
-        : find-child
+(local {: find-child
         : find-children
         : coords
+        : flatten-fragments
         : call-command}
        (require :nix-update.utils))
 
@@ -44,9 +42,17 @@
 
 ;;; Calculate fetches' names
 (fn gen-fetches-names []
-  (let [names []]
-    (vim.list_extend names (keys prefetchers))
-    (vim.list_extend names (keys ((?. config :extra-prefetchers))))
+  (let [names (-> prefetchers
+                  pairs
+                  vim.iter
+                  (: :map (fn [k _] k))
+                  (: :totable))]
+    (vim.list_extend names
+                     (-> (or (?. config :extra-prefetchers) {})
+                         pairs
+                         vim.iter
+                         (: :map (fn [k _] k))
+                         (: :totable)))
     (table.concat names " ")))
 
 ;;; Define query for matching
@@ -458,13 +464,17 @@
                               (tset fragment :?interp ?interp)))
                           resolved)
                         ;; Nowhere to search
-                        {:notfound name}))
+                        [{:notfound name}]))
                     ;;; Not found - leave be
                     {: notfound}
-                    {: notfound}))
+                    [{: notfound}]))
                ;; NOTE: might have `notfound`s inside
                full-fragments
-                (imap find-up binding)]
+                (-> binding
+                    ipairs
+                    vim.iter
+                    (: :map (fn [k v] (find-up {: k :v v})))
+                    (: :totable))]
            full-fragments)
          ;;; Not found on this level - Recurse up for same
          ;;; NOTE: unlike with variable reference
@@ -480,10 +490,10 @@
                 :depth (+ depth 1)
                 : depth-limit})
              ;; Nowhere to seach
-             {:notfound identifier}))))
+             [{:notfound identifier}]))))
 
     ;; Return the (flattened) `fragment`s
-    (flatten final-binding)))
+    (flatten-fragments final-binding)))
 
 (fn try-get-binding-bounder [opts]
   ;;; Extract opts
@@ -607,20 +617,25 @@
                          (vim.treesitter.get_node_text node bufnr)
                          ;;; ... its arguments ...
                          "_fargs"
-                         (collect [name _ (-> {: bufnr
-                                               :bounder node}
-                                              find-all-local-bindings
-                                              pairs)]
-                           (let [binding (try-get-binding-bounder
-                                           {: bufnr
-                                            : node
-                                            : name})
-                                 fragments (try-get-binding-value
+                         (let [all-bindings (find-all-local-bindings
+                                              {: bufnr :bounder node})]
+                           ;;; DEBUG
+                           (vim.notify (string.format "DEBUG all-bindings keys: %s"
+                                         (vim.inspect (vim.tbl_keys all-bindings))))
+                           (collect [name _ (pairs all-bindings)]
+                             (let [binding (try-get-binding-bounder
                                              {: bufnr
-                                              :bounder node
-                                              :identifier name})]
-                             (values name {: binding
-                                           : fragments})))
+                                              : node
+                                              : name})
+                                   fragments (try-get-binding-value
+                                               {: bufnr
+                                                :bounder node
+                                                :identifier name})]
+                               ;;; DEBUG
+                               (vim.notify (string.format "DEBUG try-get-binding-value(%s) = %s"
+                                             name (vim.inspect fragments)))
+                               (values name {: binding
+                                             : fragments}))))
                          ;;; ... and the whole node
                          ;;; (for checking whether the cursor is inside of it)
                          "_fwhole"
@@ -845,17 +860,49 @@
     {:type :new
      :data {: bufnr
             : start
-            : end
             : replacement}}
     (vim.notify
       (string.format
-        "Inserted text at (%d, %d) to (%d, %d) in buffer %d with %s"
-        start-row
-        start-col
-        end-row
-        end-col
+        "Inserted text at row %d in buffer %d with content %s"
+        start
         bufnr
         (vim.inspect replacement)))))
+
+;;; Highlight namespace for flash-update
+(local ns (vim.api.nvim_create_namespace :nix-update))
+
+;;; Flash changes from update (visual feedback using vim.hl.range)
+(fn flash-update [update]
+  (match update
+    {:type :old
+     :data {: bufnr
+            : start-row
+            : start-col
+            : end-row
+            : end-col}}
+    (vim.hl.range
+      bufnr
+      ns
+      :IncSearch
+      [start-row start-col]
+      [end-row end-col]
+      {:regtype :v
+       :inclusive false
+       :timeout 1000})
+    {:type :new
+     :data {: bufnr
+            : start
+            : end
+            : replacement}}
+    (vim.hl.range
+      bufnr
+      ns
+      :DiffChange
+      [start 0]
+      [(+ end (length replacement)) -1]
+      {:regtype :V
+       :inclusive true
+       :timeout 1000})))
 
 ;;; Prefetch given fetch
 ;;; store its results in the global state table
@@ -907,6 +954,8 @@
            ;;; Go through all fargs
            (each [farg-name farg-binding (pairs fetch._fargs)]
              (do
+               ;;; DEBUG: Print raw fragments
+               (vim.notify (string.format "DEBUG %s fragments: %s" farg-name (vim.inspect farg-binding.fragments)))
                (Result.bimap (fragments-to-value farg-binding.fragments)
                  ;;; It the value is resolved - set
                  (fn [result]
@@ -930,6 +979,10 @@
 
            ;;; Return the accumulated values
            argument-values))
+
+  ;;; DEBUG: Print argument-values
+  (vim.notify (string.format "DEBUG fetch._fname: %s" fetch._fname))
+  (vim.notify (string.format "DEBUG argument-values: %s" (vim.inspect argument-values)))
 
   ;;; Get the commands components
   (local prefetcher-cmd
@@ -984,4 +1037,5 @@
  : preview-update
  : apply-update
  : notify-update
+ : flash-update
  : prefetch-fetch}

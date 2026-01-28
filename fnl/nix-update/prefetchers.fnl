@@ -51,14 +51,17 @@
    {:required-cmds [:nurl]
     :required-keys [:owner
                     :repo
-                    :rev]
+                    [:tag :rev]]
     ;; (args -> cmd)
     :prefetcher
      (fn [{: owner
            : repo
            : rev
+           : tag
            : fetchSubmodules}]
        (local cmd "nurl")
+       ;; Use rev if available, otherwise use tag
+       (local ref (or rev tag))
 
        (local args (concat ["--json"]
                            ;; NOTE: breaks for some reason
@@ -70,7 +73,7 @@
                               "https://www.github.com/%s/%s"
                               owner
                               repo)]
-                           [rev]))
+                           [ref]))
 
        {: cmd
         : args})
@@ -82,14 +85,17 @@
    {:required-cmds [:nurl]
     :required-keys [:owner
                     :repo
-                    :rev]
+                    [:tag :rev]]
     ;; (args -> cmd)
     :prefetcher
      (fn [{: owner
            : repo
            : rev
+           : tag
            : fetchSubmodules}]
        (local cmd "nurl")
+       ;; Use rev if available, otherwise use tag
+       (local ref (or rev tag))
 
        (local args (concat ["--json"]
                            ;; ["--fetcher" "fetchFromGitLab"]
@@ -100,7 +106,7 @@
                               "https://www.gitlab.com/%s/%s"
                               owner
                               repo)]
-                           [rev]))
+                           [ref]))
 
        {: cmd
         : args})

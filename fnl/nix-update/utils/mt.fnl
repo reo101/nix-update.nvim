@@ -1,5 +1,4 @@
-(local {: missing-keys
-        : filter}
+(local {: missing-keys}
        (require "nix-update.utils.common"))
 
 (fn create-proxied []
@@ -42,6 +41,13 @@
 
   (setmetatable proxy proxy-mt))
 
+;;; Format a missing key error for display
+(fn format-missing-key [m]
+  (match m
+    {:any-of keys} (string.format "one of: %s" (table.concat keys ", "))
+    {:required key} key
+    _ (vim.inspect m)))
+
 (local
   prefetcher-mt
   {:__call
@@ -50,22 +56,30 @@
      (when self.required-keys
        (let [missing (missing-keys args self.required-keys)]
          (when (> (length missing) 0)
+           (local formatted
+                  (-> missing
+                      ipairs
+                      vim.iter
+                      (: :map (fn [_ m] (format-missing-key m)))
+                      (: :totable)))
            (vim.notify
              (string.format
                "Missing keys: %s"
-               (vim.inspect
-                 missing)))
+               (table.concat formatted "; ")))
            (lua "return nil"))))
 
      ;;; Check for missing cmds
      (when self.required-cmds
-       (let [missing (filter #(= (vim.fn.executable $.v) 0) self.required-cmds)]
+       (let [missing (-> self.required-cmds
+                         ipairs
+                         vim.iter
+                         (: :filter (fn [_ cmd] (= (vim.fn.executable cmd) 0)))
+                         (: :totable))]
          (when (> (length missing) 0)
            (vim.notify
              (string.format
                "Missing commands: %s"
-               (vim.inspect
-                 missing)))
+               (table.concat missing ", ")))
            (lua "return nil"))))
 
      ;;; Finally, safely call the prefetcher function
