@@ -183,20 +183,42 @@ I'm not really sure how often would this be of help but it's cool to have it non
 
 ## Development
 
-The `lua` folder is the compilation output of all files from the `fnl` directory. This is done using this [`Makefile`](./Makefile):
+The `lua` folder is the compilation output of all files from the `fnl` directory.
+
+### Using nfnl (recommended)
+
+The project uses [nfnl](https://github.com/Olical/nfnl) for Fennel compilation. When you have nfnl installed in Neovim, saving any `.fnl` file will automatically compile it to `lua/`.
+
+To compile all files at once:
+
+```vim
+:NfnlCompileAllFiles
+```
+
+Or via the Makefile (requires `nvim` with nfnl in `$PATH`):
 
 ```bash
 make
 ```
 
-You can clear the compilation output (the `lua` folder) using the `clean` subcommand:
+### Using standalone Fennel
+
+Alternatively, you can compile using the standalone Fennel compiler:
+
+```bash
+make fennel
+```
+
+> [!NOTE]
+> Requires `fennel` (version `1.2.0`) in your `$PATH`
+
+### Cleaning
+
+Clear the compilation output (the `lua` folder):
 
 ```bash
 make clean
 ```
-
-**NOTES:**
-- You have to have `fennel` (version `1.2.0`) in your `$PATH`
 
 Currently, there aren't any strict style guidelines being followed, except the ones derived from using [Parinfer](https://shaunlebron.github.io/parinfer) (through [parinfer-rust](https://github.com/eraserhd/parinfer-rust))
 

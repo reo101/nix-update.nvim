@@ -1,9 +1,6 @@
 (local {: prefetcher-mt}
        (require :nix-update.utils))
 
-(local {: concat-two}
-       (require "nix-update.utils"))
-
 (macro concat [...]
   (fn all [p? tbl]
     (each [k v (pairs tbl)]
@@ -11,18 +8,19 @@
         (lua "return false")))
     true)
 
-  (var res [])
-
-  ;;; TODO: compile-time concat all clumped chunks
+  ;;; Compile-time concat: if all args are literal tables, flatten at compile-time
   (if (all #(table? $2) [...])
-      (each [_ xs (ipairs [...])]
-        (each [_ x (ipairs xs)]
-          (table.insert res x)))
-      ;; else
-      (each [_ xs (ipairs [...])]
-        (set res (list `concat-two res xs))))
-
-  res)
+      (do
+        (var res [])
+        (each [_ xs (ipairs [...])]
+          (each [_ x (ipairs xs)]
+            (table.insert res x)))
+        res)
+      ;; else: runtime flatten using vim.iter
+      `(-> [,...]
+           vim.iter
+           (: :flatten)
+           (: :totable))))
 
 (local nurl-json-hash-extractor
        (fn [stdout]

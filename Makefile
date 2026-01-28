@@ -9,7 +9,12 @@ FNL_MACROS = $(shell find $(SRC_DIR) -type f -name "*macro*.fnl")
 
 LUA_RES = $(patsubst $(SRC_DIR)/%.fnl,$(RES_DIR)/%.lua,$(FNL_SRC))
 
-all: $(LUA_RES)
+# Compile all files using `nfnl` (requires `nvim` with `nfnl` installed)
+all:
+	nvim --headless -c 'lua require("nfnl.api")["compile-all-files"](".")' -c "q"
+
+# Compile using standalone `fennel` compiler
+fennel: $(LUA_RES)
 
 $(RES_DIR)/%.lua: $(SRC_DIR)/%.fnl
 	@mkdir -p $(shell dirname $@)

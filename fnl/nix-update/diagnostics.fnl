@@ -5,8 +5,7 @@
 (local {: cache}
        (require :nix-update._cache))
 
-(local {: coords
-        : concat-two}
+(local {: coords}
        (require "nix-update.utils"))
 
 (fn set-diagnostic [opts]
@@ -93,11 +92,13 @@
     ;;; NOTE: there should be no race condition here
     ;;;       since everything is run synchronously
     ;;;       on the event loop (`:help vim.schedule()`)
-    (concat-two
-      (vim.diagnostic.get
-        nil
-        {: namespace})
-      diagnostics)))
+    (-> (vim.diagnostic.get
+          nil
+          {: namespace})
+        ipairs
+        vim.iter
+        (: :chain (-> diagnostics ipairs vim.iter))
+        (: :totable))))
 
 (fn remove-diagnostic [opts]
   ;;; Extract opts

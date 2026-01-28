@@ -8,7 +8,6 @@
         : find-child
         : find-children
         : missing-keys
-        : concat-two
         : coords}
        (require "nix-update.utils.common"))
 
@@ -29,7 +28,6 @@
  : find-child
  : find-children
  : missing-keys
- : concat-two
  : coords
  : prefetcher-mt
  : create-proxied

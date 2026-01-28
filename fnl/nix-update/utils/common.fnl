@@ -56,11 +56,6 @@
                    tbl)))
           keys))
 
-(fn concat-two [xs ys]
-  (each [_ y (ipairs ys)]
-    (table.insert xs y))
-  xs)
-
 (fn coords [opts]
   ;;; Extract opts
   (local opts (or opts {}))
@@ -101,5 +96,4 @@
  : find-child
  : find-children
  : missing-keys
- : concat-two
  : coords}
