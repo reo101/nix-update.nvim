@@ -76,7 +76,7 @@ local function remove_diagnostic(opts)
   local bufnr = opts0.bufnr
   return nil
 end
-local function NixPrefetch(opts)
+local function prefetch_buffer(opts)
   local opts0 = (opts or {})
   local bufnr = opts0.bufnr
   local bufnr0 = (bufnr or vim.api.nvim_get_current_buf())
@@ -89,8 +89,4 @@ local function NixPrefetch(opts)
   end
   return nil
 end
-local function _14_()
-  return NixPrefetch()
-end
-vim.api.nvim_create_user_command("NixPrefetch", _14_, {})
-return {["set-diagnostic"] = set_diagnostic, ["remove-diagnostic"] = remove_diagnostic}
+return {["set-diagnostic"] = set_diagnostic, ["remove-diagnostic"] = remove_diagnostic, ["prefetch-buffer"] = prefetch_buffer}

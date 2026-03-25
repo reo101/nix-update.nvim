@@ -13,6 +13,12 @@ LUA_RES = $(patsubst $(SRC_DIR)/%.fnl,$(RES_DIR)/%.lua,$(FNL_SRC))
 all:
 	nvim --headless -c 'lua require("nfnl.api")["compile-all-files"](".")' -c "q"
 
+check:
+	nvim --headless -u NONE -c 'set rtp+=.' -c 'lua dofile("scripts/check.lua")' -c 'qall!'
+
+check-ci:
+	nix develop .#ci -c $(MAKE) check
+
 # Compile using standalone `fennel` compiler
 fennel: $(LUA_RES)
 

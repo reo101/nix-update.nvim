@@ -25,13 +25,11 @@ LAZY.NVIM
 >lua
     {
         "reo101/nix-update.nvim",
-        dependencies = {
-            -- None (yet), but could use those
-            -- "nvim-lua/plenary.nvim",
-            -- "nvim-telescope/telescope.nvim",
-        }
-        config = function()
-            require("nix-update").setup()
+        opts = {
+            update_actions = { "apply", "flash", "notify" },
+        },
+        config = function(_, opts)
+            require("nix-update").setup(opts)
         end,
     }
 <
@@ -39,11 +37,28 @@ LAZY.NVIM
 
 CONFIGURATION                                       *nix-update-configuration*
 
-Lua init file:
+`setup()` is optional and only configures options.
+Commands and `<Plug>` mappings are auto-registered on startup.
+
+Recommended global config (source of truth):
+
+>lua
+    vim.g.nix_update = {
+      update_actions = { "apply", "notify" },
+      extra_prefetchers = {
+        -- ...
+      },
+    }
+<
+
+Lua init file (only needed when customizing options):
 
 >lua
     require("nix-update").setup(opts)
 <
+
+`setup(opts)` merges your overrides into `vim.g.nix_update` and reapplies
+config.
 
 This `setup` function accepts the following table:
 
@@ -51,7 +66,7 @@ This `setup` function accepts the following table:
     require("nix-update").setup({
       -- Extra prefetcher commands
       -- table of tables, where each one looks like this:
-      extra_prefetcher_cmds = {
+      extra_prefetchers = {
         ["myFetch"] = {
           -- (array of strings) Array of required system commands
           ["required-cmds"] = { "cmd1", "cmd2" },
@@ -93,16 +108,33 @@ This `setup` function accepts the following table:
 
 **NOTES:** - The table is empty by default - `required-cmds` and
 `required-keys` are optional - You can override the builtin definitions by
-using the same name in `extra`
+using the same name - `extra_prefetcher_cmds` remains a backwards-compatible
+alias - Invalid options are validated and reported with `vim.notify(...,
+ERROR)`
 
 
 USAGE                                                       *nix-update-usage*
 
-Bind `prefetch_fetch` to a keymap:
+Run updates with the scoped command:
+
+>vim
+    :NixUpdate prefetch   " update fetch under cursor
+    :NixUpdate buffer     " update all fetches in current buffer
+    :NixUpdate health     " open checkhealth output
+    :NixUpdate help       " open :h nix-update
+<
+
+Legacy alias:
+
+>vim
+    :NixPrefetch          " same as :NixUpdate buffer
+<
+
+Bind the provided `<Plug>` mappings:
 
 >lua
-    -- <leader> -> Nix update -> under Cursor
-    vim.keymap.set("n", "<leader>nc", require("nix-update").prefetch_fetch)
+    vim.keymap.set("n", "<leader>nc", "<Plug>(NixUpdatePrefetch)")
+    vim.keymap.set("n", "<leader>nC", "<Plug>(NixUpdatePrefetchBuffer)")
 <
 
 Run it in a `Nix` file with the cursor inside a fetch:
@@ -207,9 +239,19 @@ subcommand:
 
 **NOTES:** - You have to have `fennel` (version `1.2.0`) in your `$PATH`
 
-Currently, there aren’t any strict style guidelines being followed, except
-the ones derived from using Parinfer <https://shaunlebron.github.io/parinfer>
-(through parinfer-rust <https://github.com/eraserhd/parinfer-rust>)
+
+CHECKS ~
+
+Run project checks (compilation + runtime smoke checks):
+
+>bash
+    make check
+<
+
+The check script bootstraps `nfnl` and `plenary.nvim` automatically (via
+`vim.pack.add` when available, otherwise via `pack/*/start` cloning).
+
+Use `:checkhealth nix-update` to inspect runtime/config/dependency health.
 
 
 TODO                                                         *nix-update-todo*
@@ -219,7 +261,6 @@ TODO                                                         *nix-update-todo*
 - Simpler prefetch commands (not just system ones, maybe lua functions)
 - Style guidelines (with optional enforcement)
 - Telescope pickers for selective updating
-- Use `plenary.nvim` for running async commands instead of hand-rolled solution
 
 
 CREDITS                                                   *nix-update-credits*

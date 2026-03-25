@@ -619,9 +619,6 @@
                          "_fargs"
                          (let [all-bindings (find-all-local-bindings
                                               {: bufnr :bounder node})]
-                           ;;; DEBUG
-                           (vim.notify (string.format "DEBUG all-bindings keys: %s"
-                                         (vim.inspect (vim.tbl_keys all-bindings))))
                            (collect [name _ (pairs all-bindings)]
                              (let [binding (try-get-binding-bounder
                                              {: bufnr
@@ -631,9 +628,6 @@
                                                {: bufnr
                                                 :bounder node
                                                 :identifier name})]
-                               ;;; DEBUG
-                               (vim.notify (string.format "DEBUG try-get-binding-value(%s) = %s"
-                                             name (vim.inspect fragments)))
                                (values name {: binding
                                              : fragments}))))
                          ;;; ... and the whole node
@@ -954,8 +948,6 @@
            ;;; Go through all fargs
            (each [farg-name farg-binding (pairs fetch._fargs)]
              (do
-               ;;; DEBUG: Print raw fragments
-               (vim.notify (string.format "DEBUG %s fragments: %s" farg-name (vim.inspect farg-binding.fragments)))
                (Result.bimap (fragments-to-value farg-binding.fragments)
                  ;;; It the value is resolved - set
                  (fn [result]
@@ -979,10 +971,6 @@
 
            ;;; Return the accumulated values
            argument-values))
-
-  ;;; DEBUG: Print argument-values
-  (vim.notify (string.format "DEBUG fetch._fname: %s" fetch._fname))
-  (vim.notify (string.format "DEBUG argument-values: %s" (vim.inspect argument-values)))
 
   ;;; Get the commands components
   (local prefetcher-cmd

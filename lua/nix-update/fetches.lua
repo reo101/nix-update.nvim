@@ -1,3 +1,4 @@
+-- [nfnl] fnl/nix-update/fetches.fnl
 local _local_1_ = require("nix-update.prefetchers")
 local prefetchers = _local_1_.prefetchers
 local _local_2_ = require("nix-update._cache")
@@ -696,14 +697,12 @@ local function find_used_fetches(opts)
                   return vim.treesitter.get_node_text(node, bufnr0)
                 elseif (capture_id == "_fargs") then
                   local all_bindings = find_all_local_bindings({bufnr = bufnr0, bounder = node})
-                  vim.notify(string.format("DEBUG all-bindings keys: %s", vim.inspect(vim.tbl_keys(all_bindings))))
                   local tbl_21_0 = {}
                   for name, _0 in pairs(all_bindings) do
                     local k_22_0, v_23_0
                     do
                       local binding = try_get_binding_bounder({bufnr = bufnr0, node = node, name = name})
                       local fragments = try_get_binding_value({bufnr = bufnr0, bounder = node, identifier = name})
-                      vim.notify(string.format("DEBUG try-get-binding-value(%s) = %s", name, vim.inspect(fragments)))
                       k_22_0, v_23_0 = name, {binding = binding, fragments = fragments}
                     end
                     if ((k_22_0 ~= nil) and (v_23_0 ~= nil)) then
@@ -973,7 +972,6 @@ local function prefetch_fetch(opts)
     local argument_values0 = {}
     local notfounds_pairs = {}
     for farg_name, farg_binding in pairs(fetch0._fargs) do
-      vim.notify(string.format("DEBUG %s fragments: %s", farg_name, vim.inspect(farg_binding.fragments)))
       local function _172_(result)
         argument_values0[farg_name] = result
         return nil
@@ -994,8 +992,6 @@ local function prefetch_fetch(opts)
     end
     argument_values = argument_values0
   end
-  vim.notify(string.format("DEBUG fetch._fname: %s", fetch0._fname))
-  vim.notify(string.format("DEBUG argument-values: %s", vim.inspect(argument_values)))
   local prefetcher_cmd = prefetcher(argument_values)
   if not prefetcher_cmd then
     vim.notify(string.format("Could not generate command for the prefetcher '%s'", fetch0._fname))

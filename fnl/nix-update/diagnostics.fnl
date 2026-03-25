@@ -110,7 +110,7 @@
 
   nil)
 
-(fn NixPrefetch [opts]
+(fn prefetch-buffer [opts]
   ;;; Extract opts
   (local opts (or opts {}))
   (local {: bufnr}
@@ -138,8 +138,6 @@
   (each [_ fetch (ipairs found-fetches)]
     (prefetch-fetch {: bufnr : fetch})))
 
-;;; Define command
-(vim.api.nvim_create_user_command "NixPrefetch" #(NixPrefetch) {})
-
 {: set-diagnostic
- : remove-diagnostic}
+ : remove-diagnostic
+ : prefetch-buffer}

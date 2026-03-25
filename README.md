@@ -5,7 +5,7 @@
 Dynamically and asynchronously update attributes of *fetch-like* constructions in Nix
 
 ![License](https://img.shields.io/github/license/reo101/nix-update.nvim)
-![Neovim version](https://img.shields.io/badge/Neovim-0.9-57A143?logo=neovim)
+![Neovim version](https://img.shields.io/badge/Neovim-0.12%2B-57A143?logo=neovim)
 
 </div>
 
@@ -19,7 +19,7 @@ Dynamically and asynchronously update attributes of *fetch-like* constructions i
 
 ### Requirements
 
-- nvim `v0.9`
+- nvim with `vim.pack` support (`0.12+`)
 - **[Optional]** [`nix-prefetch-url`](https://github.com/NixOS/nixpkgs/blob/master/pkgs/build-support/fetchgit/nix-prefetch-git) (and possibly more, checkout the included prefetchers [here](./fnl/nix-update/prefetchers.fnl))
 
 #### Lazy.nvim
@@ -27,23 +27,37 @@ Dynamically and asynchronously update attributes of *fetch-like* constructions i
 ```lua
 {
     "reo101/nix-update.nvim",
-    dependencies = {
-        -- None (yet), but could use those
-        -- "nvim-lua/plenary.nvim",
-        -- "nvim-telescope/telescope.nvim",
-    }
-    config = function()
-        require("nix-update").setup()
+    -- setup() is optional; call it only when overriding defaults
+    opts = {
+      update_actions = { "apply", "flash", "notify" },
+    },
+    config = function(_, opts)
+      require("nix-update").setup(opts)
     end,
 }
 ```
 
 ## Configuration
 
-Lua init file:
+`setup()` is optional and only configures options.
+Commands and `<Plug>` mappings are auto-registered on startup.
+
+Recommended global config (source of truth):
+```lua
+vim.g.nix_update = {
+  update_actions = { "apply", "notify" },
+  extra_prefetchers = {
+    -- ...
+  },
+}
+```
+
+Lua init file (only needed when customizing options):
 ```lua
 require("nix-update").setup(opts)
 ```
+
+`setup(opts)` merges your overrides into `vim.g.nix_update` and reapplies config.
 
 This `setup` function accepts the following table:
 
@@ -64,7 +78,7 @@ require("nix-update").setup({
 
   -- Extra prefetcher commands
   -- table of tables, where each one looks like this:
-  extra_prefetcher_cmds = {
+  extra_prefetchers = {
     ["myFetch"] = {
       -- (array of strings) Array of required system commands
       ["required-cmds"] = { "cmd1", "cmd2" },
@@ -107,15 +121,32 @@ require("nix-update").setup({
 **NOTES:**
 - The table is empty by default
 - `required-cmds` and `required-keys` are optional
-- You can override the builtin definitions by using the same name in `extra`
+- You can override the builtin definitions by using the same name
+- `extra_prefetcher_cmds` is still accepted as a backwards-compatible alias
+- Invalid options are validated and reported with `vim.notify(..., ERROR)`
 
 ## Usage
 
-Bind `prefetch_fetch` to a keymap:
+Run updates with the scoped command:
+
+```vim
+:NixUpdate prefetch   " update fetch under cursor
+:NixUpdate buffer     " update all fetches in current buffer
+:NixUpdate health     " open checkhealth output
+:NixUpdate help       " open :h nix-update
+```
+
+Legacy alias (kept for compatibility):
+
+```vim
+:NixPrefetch          " same as :NixUpdate buffer
+```
+
+Bind the provided `<Plug>` mappings:
 
 ```lua
--- <leader> -> Nix update -> under Cursor
-vim.keymap.set("n", "<leader>nc", require("nix-update").prefetch_fetch)
+vim.keymap.set("n", "<leader>nc", "<Plug>(NixUpdatePrefetch)")
+vim.keymap.set("n", "<leader>nC", "<Plug>(NixUpdatePrefetchBuffer)")
 ```
 
 Run it in a `Nix` file with the cursor inside a fetch:
@@ -202,6 +233,24 @@ The `lua` folder is the compilation output of all files from the `fnl` directory
 
 The project uses [nfnl](https://github.com/Olical/nfnl) for Fennel compilation. When you have nfnl installed in Neovim, saving any `.fnl` file will automatically compile it to `lua/`.
 
+### Nix Development Shell (recommended)
+
+The repository ships a pinned `flake.nix` (using `flake-parts`) so local checks and CI run against the same Neovim build from pinned `nixpkgs`.
+
+Enter the shell:
+
+```bash
+nix develop .#default
+```
+
+Run checks in the CI-equivalent shell:
+
+```bash
+nix develop .#ci -c make check
+```
+
+The check runner intentionally requires `vim.pack.add` and bootstraps `nfnl` + `plenary.nvim` through `vim.pack` only.
+
 To compile all files at once:
 
 ```vim
@@ -233,7 +282,23 @@ Clear the compilation output (the `lua` folder):
 make clean
 ```
 
-Currently, there aren't any strict style guidelines being followed, except the ones derived from using [Parinfer](https://shaunlebron.github.io/parinfer) (through [parinfer-rust](https://github.com/eraserhd/parinfer-rust))
+### Checks
+
+Run project checks (compilation + runtime smoke checks):
+
+```bash
+make check
+```
+
+For reproducible checks with pinned tooling:
+
+```bash
+nix develop .#ci -c make check
+```
+
+This check script bootstraps `nfnl` and `plenary.nvim` via `vim.pack.add`.
+
+Use `:checkhealth nix-update` to inspect runtime/config/dependency health.
 
 ## TODO
 
@@ -242,7 +307,6 @@ Currently, there aren't any strict style guidelines being followed, except the o
 - Simpler prefetch commands (not just system ones, maybe lua functions)
 - Style guidelines (with optional enforcement)
 - Telescope pickers for selective updating
-- Use `plenary.nvim` for running async commands instead of hand-rolled solution
 
 ## Credits
 - Original inspiration: [https://github.com/jwiegley/nix-update-el](https://github.com/jwiegley/nix-update-el)
