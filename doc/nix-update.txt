@@ -1,4 +1,4 @@
-*nix-update.txt*          For NVIM v0.8.0          Last change: 2025 August 26
+*nix-update.txt*           For NVIM v0.8.0          Last change: 2026 March 26
 
 ==============================================================================
 Table of Contents                               *nix-update-table-of-contents*
@@ -16,7 +16,7 @@ INSTALLATION                                         *nix-update-installation*
 
 REQUIREMENTS ~
 
-- nvim `v0.9`
+- nvim with `vim.pack` support (`0.12+`)
 - **[Optional]** `nix-prefetch-url` <https://github.com/NixOS/nixpkgs/blob/master/pkgs/build-support/fetchgit/nix-prefetch-git> (and possibly more, checkout the included prefetchers here <./fnl/nix-update/prefetchers.fnl>)
 
 
@@ -25,11 +25,12 @@ LAZY.NVIM
 >lua
     {
         "reo101/nix-update.nvim",
+        -- setup() is optional; call it only when overriding defaults
         opts = {
-            update_actions = { "apply", "flash", "notify" },
+          update_actions = { "apply", "flash", "notify" },
         },
         config = function(_, opts)
-            require("nix-update").setup(opts)
+          require("nix-update").setup(opts)
         end,
     }
 <
@@ -37,8 +38,8 @@ LAZY.NVIM
 
 CONFIGURATION                                       *nix-update-configuration*
 
-`setup()` is optional and only configures options.
-Commands and `<Plug>` mappings are auto-registered on startup.
+`setup()` is optional and only configures options. Commands and `<Plug>`
+mappings are auto-registered on startup.
 
 Recommended global config (source of truth):
 
@@ -62,8 +63,26 @@ config.
 
 This `setup` function accepts the following table:
 
+
+UPDATE ACTIONS ~
+
+  -----------------------------------------------------------------------
+  Action     Description
+  ---------- ------------------------------------------------------------
+  apply      Apply the update to the buffer (modifies the text)
+
+  flash      Briefly highlight the changed region using vim.hl.range
+
+  notify     Show a vim.notify message with update details
+
+  preview    Show the update as virtual text overlay (without applying)
+  -----------------------------------------------------------------------
 >lua
     require("nix-update").setup({
+      -- Actions to run on each update (in order)
+      -- Default: { "apply", "notify" }
+      update_actions = { "apply", "flash", "notify" },
+    
       -- Extra prefetcher commands
       -- table of tables, where each one looks like this:
       extra_prefetchers = {
@@ -108,9 +127,9 @@ This `setup` function accepts the following table:
 
 **NOTES:** - The table is empty by default - `required-cmds` and
 `required-keys` are optional - You can override the builtin definitions by
-using the same name - `extra_prefetcher_cmds` remains a backwards-compatible
-alias - Invalid options are validated and reported with `vim.notify(...,
-ERROR)`
+using the same name - `extra_prefetcher_cmds` is still accepted as a
+backwards-compatible alias - Invalid options are validated and reported with
+`vim.notify(..., ERROR)`
 
 
 USAGE                                                       *nix-update-usage*
@@ -124,7 +143,7 @@ Run updates with the scoped command:
     :NixUpdate help       " open :h nix-update
 <
 
-Legacy alias:
+Legacy alias (kept for compatibility):
 
 >vim
     :NixPrefetch          " same as :NixUpdate buffer
@@ -224,20 +243,67 @@ it nonetheless. 😄
 DEVELOPMENT                                           *nix-update-development*
 
 The `lua` folder is the compilation output of all files from the `fnl`
-directory. This is done using this `Makefile` <./Makefile>:
+directory.
+
+
+USING NFNL (RECOMMENDED) ~
+
+The project uses nfnl <https://github.com/Olical/nfnl> for Fennel compilation.
+When you have nfnl installed in Neovim, saving any `.fnl` file will
+automatically compile it to `lua/`.
+
+
+NIX DEVELOPMENT SHELL (RECOMMENDED) ~
+
+The repository ships a pinned `flake.nix` (using `flake-parts`) so local checks
+and CI run against the same Neovim build from pinned `nixpkgs`.
+
+Enter the shell:
+
+>bash
+    nix develop .#default
+<
+
+Run checks in the CI-equivalent shell:
+
+>bash
+    nix develop .#ci -c make check
+<
+
+The check runner intentionally requires `vim.pack.add` and bootstraps `nfnl` +
+`plenary.nvim` through `vim.pack` only.
+
+To compile all files at once:
+
+>vim
+    :NfnlCompileAllFiles
+<
+
+Or via the Makefile (requires `nvim` with nfnl in `$PATH`):
 
 >bash
     make
 <
 
-You can clear the compilation output (the `lua` folder) using the `clean`
-subcommand:
+
+USING STANDALONE FENNEL ~
+
+Alternatively, you can compile using the standalone Fennel compiler:
+
+>bash
+    make fennel
+<
+
+
+  [!NOTE] Requires `fennel` (version `1.2.0`) in your `$PATH`
+
+CLEANING ~
+
+Clear the compilation output (the `lua` folder):
 
 >bash
     make clean
 <
-
-**NOTES:** - You have to have `fennel` (version `1.2.0`) in your `$PATH`
 
 
 CHECKS ~
@@ -248,8 +314,13 @@ Run project checks (compilation + runtime smoke checks):
     make check
 <
 
-The check script bootstraps `nfnl` and `plenary.nvim` automatically (via
-`vim.pack.add` when available, otherwise via `pack/*/start` cloning).
+For reproducible checks with pinned tooling:
+
+>bash
+    nix develop .#ci -c make check
+<
+
+This check script bootstraps `nfnl` and `plenary.nvim` via `vim.pack.add`.
 
 Use `:checkhealth nix-update` to inspect runtime/config/dependency health.
 
