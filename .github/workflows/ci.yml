@@ -1,0 +1,25 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: nothing-but-nix
+        uses: wimpysworld/nothing-but-nix@main
+
+      - name: install nix
+        uses: DeterminateSystems/nix-installer-action@main
+
+      - name: magic nix cache
+        uses: DeterminateSystems/magic-nix-cache-action@main
+
+      - name: run checks
+        run: |
+          nix develop .#ci -c nvim --version
+          nix develop .#ci -c make check
