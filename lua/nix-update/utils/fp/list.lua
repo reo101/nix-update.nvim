@@ -5,7 +5,7 @@ List["list?"] = function(xs)
 end
 List.new = function(...)
   local t = table.pack(...)
-  t["n"] = nil
+  t.n = nil
   return t
 end
 List.map = function(xs, f)

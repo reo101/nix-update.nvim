@@ -1,26 +1,26 @@
 -- [nfnl] fnl/nix-update/commands.fnl
 local registered_3f = false
 local subcommand_tbl
-local function _1_(_args, _opts)
+local function fn_1_(_args, _opts)
   local nix_update = require("nix-update")
   return nix_update.prefetch_fetch({})
 end
-local function _2_(_args, _opts)
+local function fn_2_(_args, _opts)
   local nix_update = require("nix-update")
   return nix_update.prefetch_buffer({})
 end
-local function _3_(_args, _opts)
+local function fn_3_(_args, _opts)
   return vim.cmd("checkhealth nix-update")
 end
-local function _4_(_args, _opts)
+local function fn_4_(_args, _opts)
   return vim.cmd("help nix-update")
 end
-subcommand_tbl = {prefetch = {impl = _1_}, buffer = {impl = _2_}, health = {impl = _3_}, help = {impl = _4_}}
+subcommand_tbl = {prefetch = {impl = fn_1_}, buffer = {impl = fn_2_}, health = {impl = fn_3_}, help = {impl = fn_4_}}
 local function complete_subcommands(arg_lead)
-  local function _5_(_, key)
+  local function fn_5_(_, key)
     return (string.find(key, arg_lead, 1, true) ~= nil)
   end
-  return vim.iter(ipairs(vim.tbl_keys(subcommand_tbl))):filter(_5_):totable()
+  return vim.iter(ipairs(vim.tbl_keys(subcommand_tbl))):filter(fn_5_):totable()
 end
 local function complete(arg_lead, cmdline, _)
   local matches = {string.match(cmdline, "^['<,'>]*NixUpdate[!]*%s(%S+)%s(.*)$")}
@@ -85,21 +85,21 @@ local function register()
   else
   end
   vim.api.nvim_create_user_command("NixUpdate", run_command, {nargs = "*", desc = "nix-update commands (prefetch, buffer, health, help)", complete = complete})
-  local function _17_(_)
+  local function fn_17_(_)
     local nix_update = require("nix-update")
     return nix_update.prefetch_buffer({})
   end
-  vim.api.nvim_create_user_command("NixPrefetch", _17_, {desc = "Prefetch all fetches in the current buffer"})
-  local function _18_()
+  vim.api.nvim_create_user_command("NixPrefetch", fn_17_, {desc = "Prefetch all fetches in the current buffer"})
+  local function fn_18_()
     local nix_update = require("nix-update")
     return nix_update.prefetch_fetch({})
   end
-  vim.keymap.set("n", "<Plug>(NixUpdatePrefetch)", _18_, {silent = true, desc = "Prefetch and update fetch at cursor"})
-  local function _19_()
+  vim.keymap.set("n", "<Plug>(NixUpdatePrefetch)", fn_18_, {silent = true, desc = "Prefetch and update fetch at cursor"})
+  local function fn_19_()
     local nix_update = require("nix-update")
     return nix_update.prefetch_buffer({})
   end
-  vim.keymap.set("n", "<Plug>(NixUpdatePrefetchBuffer)", _19_, {silent = true, desc = "Prefetch and update all fetches in buffer"})
+  vim.keymap.set("n", "<Plug>(NixUpdatePrefetchBuffer)", fn_19_, {silent = true, desc = "Prefetch and update all fetches in buffer"})
   registered_3f = true
   return nil
 end

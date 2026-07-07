@@ -4,20 +4,20 @@ local missing_keys = _local_1_["missing-keys"]
 local function create_proxied()
   local raw = {}
   local on_index
-  local function _2_(_new, _key, _value)
+  local function fn_2_(_new, _key, _value)
   end
-  on_index = _2_
+  on_index = fn_2_
   local proxy = {}
   local proxy_mt
-  local function _3_(_self, key)
+  local function fn_3_(_self, key)
     on_index(false, key)
     return rawget(raw, key)
   end
-  local function _4_(_self, key, value)
+  local function fn_4_(_self, key, value)
     on_index(true, key, value)
     return rawset(raw, key, value)
   end
-  local function _5_(_self, opts)
+  local function fn_5_(_self, opts)
     local opts0 = (opts or {})
     local handler = opts0.handler
     local clear = opts0.clear
@@ -35,7 +35,7 @@ local function create_proxied()
       return nil
     end
   end
-  proxy_mt = {__index = _3_, __newindex = _4_, __call = _5_}
+  proxy_mt = {__index = fn_3_, __newindex = fn_4_, __call = fn_5_}
   return setmetatable(proxy, proxy_mt)
 end
 local function format_missing_key(m)
@@ -51,15 +51,15 @@ local function format_missing_key(m)
   end
 end
 local prefetcher_mt
-local function _10_(self, args)
+local function fn_10_(self, args)
   if self["required-keys"] then
     local missing = missing_keys(args, self["required-keys"])
     if (#missing > 0) then
       local formatted
-      local function _11_(_, m)
+      local function fn_11_(_, m)
         return format_missing_key(m)
       end
-      formatted = vim.iter(ipairs(missing)):map(_11_):totable()
+      formatted = vim.iter(ipairs(missing)):map(fn_11_):totable()
       vim.notify(string.format("Missing keys: %s", table.concat(formatted, "; ")))
       return nil
     else
@@ -68,10 +68,10 @@ local function _10_(self, args)
   end
   if self["required-cmds"] then
     local missing
-    local function _14_(_, cmd)
+    local function fn_14_(_, cmd)
       return (vim.fn.executable(cmd) == 0)
     end
-    missing = vim.iter(ipairs(self["required-cmds"])):filter(_14_):totable()
+    missing = vim.iter(ipairs(self["required-cmds"])):filter(fn_14_):totable()
     if (#missing > 0) then
       vim.notify(string.format("Missing commands: %s", table.concat(missing, ", ")))
       return nil
@@ -81,5 +81,5 @@ local function _10_(self, args)
   end
   return self.prefetcher(args)
 end
-prefetcher_mt = {__call = _10_}
+prefetcher_mt = {__call = fn_10_}
 return {["create-proxied"] = create_proxied, ["prefetcher-mt"] = prefetcher_mt}

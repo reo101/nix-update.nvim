@@ -103,14 +103,14 @@ local function initialize()
     end
     return nil
   end
-  local function _16_(new, _key, value)
+  local function fn_16_(new, _key, value)
     if new then
       return on_cache_write(value)
     else
       return nil
     end
   end
-  cache({handler = _16_})
+  cache({handler = fn_16_})
   initialized_3f = true
   return true
 end
@@ -118,7 +118,7 @@ local function setup(opts)
   local normalized_current = normalize_options((get_global_options() or {}))
   local normalized_overrides = normalize_options(opts)
   local merged = vim.tbl_deep_extend("force", normalized_current, normalized_overrides)
-  vim.g["nix_update"] = merged
+  vim.g.nix_update = merged
   global_options_applied_3f = false
   ensure_global_options()
   return config

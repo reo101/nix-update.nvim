@@ -75,10 +75,11 @@ Result.bimap = function(mx, of, ef)
   end
 end
 Result.pure = function(...)
-  if (... == nil) then
+  local case_11_ = ...
+  if (case_11_ == nil) then
     return {"none"}
   else
-    local _ = ...
+    local _ = case_11_
     return {"some", ...}
   end
 end
@@ -100,16 +101,16 @@ Result[">>="] = function(mx, f)
   end
 end
 Result.validate = function(v, p, e)
-  local _3e_3d_3d_14_ = Result[">>="]
-  local pure_15_ = Result.pure
-  local function _16_(x)
+  local _3e_3d_3d_15_ = Result[">>="]
+  local pure_16_ = Result.pure
+  local function fn_17_(x)
     if p(x) then
       return Result.new(x)
     else
       return Restut.err(e)
     end
   end
-  return _3e_3d_3d_14_(v, _16_)
+  return _3e_3d_3d_15_(v, fn_17_)
 end
 Result.unwrap = function(mx)
   if ((_G.type(mx) == "table") and (mx[1] == "ok")) then

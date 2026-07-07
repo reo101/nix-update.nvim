@@ -7,14 +7,14 @@ local valid_update_actions = {apply = true, flash = true, notify = true, preview
 local valid_option_keys = {["extra-prefetchers"] = true, ["extra-prefetcher-cmds"] = true, ["update-actions"] = true}
 local config = {}
 config["extra-prefetchers"] = create_proxied()
-local function _2_(new, _key, value)
+local function fn_2_(new, _key, value)
   if new then
     return setmetatable(value, prefetcher_mt)
   else
     return nil
   end
 end
-config["extra-prefetchers"]({handler = _2_})
+config["extra-prefetchers"]({handler = fn_2_})
 config["update-actions"] = vim.deepcopy(default_update_actions)
 local function validate_extra_prefetchers(extra_prefetchers)
   if not ((extra_prefetchers == nil) or (type(extra_prefetchers) == "table")) then
@@ -57,16 +57,16 @@ local function validate_update_actions(update_actions)
       for i, action in ipairs(update_actions) do
         local and_10_ = not err
         if and_10_ then
-          local _12_
+          local do_tgt_12_
           do
             local t_11_ = valid_update_actions
             if (nil ~= t_11_) then
               t_11_ = t_11_[action]
             else
             end
-            _12_ = t_11_
+            do_tgt_12_ = t_11_
           end
-          and_10_ = not _12_
+          and_10_ = not do_tgt_12_
         end
         if and_10_ then
           err = string.format("`update-actions[%d]` must be one of: apply, flash, notify, preview", i)
@@ -86,16 +86,16 @@ local function validate_options(opts)
   for key, _ in pairs(opts) do
     local and_18_ = not err
     if and_18_ then
-      local _20_
+      local do_tgt_20_
       do
         local t_19_ = valid_option_keys
         if (nil ~= t_19_) then
           t_19_ = t_19_[key]
         else
         end
-        _20_ = t_19_
+        do_tgt_20_ = t_19_
       end
-      and_18_ = not _20_
+      and_18_ = not do_tgt_20_
     end
     if and_18_ then
       err = string.format("Unknown setup option `%s`", key)

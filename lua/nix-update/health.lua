@@ -38,16 +38,16 @@ local function check_config()
     local i_27_ = 0
     for _, action in ipairs((config["update-actions"] or {})) do
       local val_28_
-      local _4_
+      local do_tgt_4_
       do
         local t_3_ = valid_update_actions
         if (nil ~= t_3_) then
           t_3_ = t_3_[action]
         else
         end
-        _4_ = t_3_
+        do_tgt_4_ = t_3_
       end
-      if not _4_ then
+      if not do_tgt_4_ then
         val_28_ = action
       else
         val_28_ = nil
@@ -68,10 +68,10 @@ local function check_config()
 end
 local function check_dependencies()
   local missing_cmds
-  local function _9_(_, cmd)
+  local function fn_9_(_, cmd)
     return (vim.fn.executable(cmd) == 0)
   end
-  missing_cmds = vim.iter(ipairs(collect_required_commands())):filter(_9_):totable()
+  missing_cmds = vim.iter(ipairs(collect_required_commands())):filter(fn_9_):totable()
   if (#missing_cmds > 0) then
     return report_warn(string.format("Missing commands: %s", table.concat(missing_cmds, ", ")))
   else

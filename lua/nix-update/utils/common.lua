@@ -28,17 +28,17 @@ local function find_children(node, p_3f)
 end
 local function missing_keys(tbl, required_keys)
   local tbl_keys
-  local function _4_(k, _)
+  local function fn_4_(k, _)
     return k
   end
-  tbl_keys = vim.iter(pairs(tbl)):map(_4_):totable()
-  local function _5_(_, key)
+  tbl_keys = vim.iter(pairs(tbl)):map(fn_4_):totable()
+  local function fn_5_(_, key)
     if vim.islist(key) then
       local found
-      local function _6_(_0, k)
+      local function fn_6_(_0, k)
         return vim.list_contains(tbl_keys, k)
       end
-      found = vim.iter(ipairs(key)):any(_6_)
+      found = vim.iter(ipairs(key)):any(fn_6_)
       if not found then
         return {["any-of"] = key}
       else
@@ -50,7 +50,7 @@ local function missing_keys(tbl, required_keys)
       return nil
     end
   end
-  return vim.iter(ipairs(required_keys)):map(_5_):totable()
+  return vim.iter(ipairs(required_keys)):map(fn_5_):totable()
 end
 local function coords(opts)
   local opts0 = (opts or {})

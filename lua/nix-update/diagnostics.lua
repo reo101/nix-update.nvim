@@ -40,7 +40,7 @@ local function set_diagnostic(opts)
     for key, value in pairs(data) do
       local val_28_
       do
-        local function _8_()
+        local function do_iife_8_()
           local farg = fetch._fargs[key]
           if farg then
             local _let_9_ = coords({bufnr = bufnr, node = farg.binding})
@@ -54,7 +54,7 @@ local function set_diagnostic(opts)
             return {["start-row"] = start_row, ["start-col"] = start_col, message = string.format("Add new field \"%s\" with value \"%s\"", key, value), severity = vim.diagnostic.severity.WARN}
           end
         end
-        local _let_12_ = _8_()
+        local _let_12_ = do_iife_8_()
         local start_row = _let_12_["start-row"]
         local start_col = _let_12_["start-col"]
         local message = _let_12_.message
