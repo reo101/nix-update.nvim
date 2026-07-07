@@ -48,3 +48,18 @@ stdenv.mkDerivation (finalAttrs: {
   };
 }
 ```
+
+- [ ] Support `inherit`s in `rec` attrsets
+
+```nix
+stdenv.mkDerivation rec {
+  inherit pname version;
+
+  src = fetchFromGitHub {
+    owner = "gaasedelen";
+    repo = "lighthouse";
+    rev = "v${version}";
+    hash = "sha256-H2yVP4RlqBH65VlsAZBME3FTebEHbSfk/ZIj+qB3fLo=";
+  };
+}
+```
