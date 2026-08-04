@@ -100,13 +100,51 @@ local function find_all_local_bindings(opts)
           bool_expr = nil
         end
       end
+      local number_expr
+      do
+        local number_3f
+        local function hashfn_21_(_241)
+          return vim.list_contains({"integer_expression", "float_expression"}, _241:type())
+        end
+        number_3f = hashfn_21_
+        local number_expression
+        local function hashfn_22_(_241, _242)
+          return ((_242 == "expression") and number_3f(_241))
+        end
+        local or_23_ = find_child(binding, hashfn_22_)
+        if not or_23_ then
+          local unary_expression
+          local function hashfn_25_(_241, _242)
+            return ((_242 == "expression") and (_241:type() == "unary_expression"))
+          end
+          unary_expression = find_child(binding, hashfn_25_)
+          local and_26_ = unary_expression
+          if and_26_ then
+            local function hashfn_27_(_241, _242)
+              return ((_242 == "argument") and number_3f(_241))
+            end
+            and_26_ = find_child(unary_expression, hashfn_27_)
+          end
+          if and_26_ then
+            or_23_ = unary_expression
+          else
+            or_23_ = nil
+          end
+        end
+        number_expression = or_23_
+        if number_expression then
+          number_expr = {{node = number_expression, value = vim.treesitter.get_node_text(number_expression, bufnr0)}}
+        else
+          number_expr = nil
+        end
+      end
       local string_expr
       do
         local string_expression
-        local function hashfn_21_(_241, _242)
+        local function hashfn_30_(_241, _242)
           return ((_241:type() == "string_expression") and (_242 == "expression"))
         end
-        string_expression = find_child(binding, hashfn_21_)
+        string_expression = find_child(binding, hashfn_30_)
         if string_expression then
           if (string_expression:named_child_count() > 0) then
             local tbl_26_ = {}
@@ -114,43 +152,43 @@ local function find_all_local_bindings(opts)
             for node, _0 in string_expression:iter_children() do
               local val_28_
               do
-                local case_22_ = node:type()
-                if (case_22_ == "interpolation") then
-                  local let_23_
+                local case_31_ = node:type()
+                if (case_31_ == "interpolation") then
+                  local let_32_
                   do
                     local variable_expression
                     if (nil ~= node) then
-                      local function hashfn_24_(_241, _242)
+                      local function hashfn_33_(_241, _242)
                         return ((_241:type() == "variable_expression") and (_242 == "expression"))
                       end
-                      variable_expression = find_child(node, hashfn_24_)
+                      variable_expression = find_child(node, hashfn_33_)
                     else
                       variable_expression = nil
                     end
                     if variable_expression then
-                      let_23_ = {["?interp"] = node, name = vim.treesitter.get_node_text(variable_expression, bufnr0)}
+                      let_32_ = {["?interp"] = node, name = vim.treesitter.get_node_text(variable_expression, bufnr0)}
                     else
-                      let_23_ = nil
+                      let_32_ = nil
                     end
                   end
-                  local or_27_ = let_23_
-                  if not or_27_ then
+                  local or_36_ = let_32_
+                  if not or_36_ then
                     local select_expression
                     if (nil ~= node) then
-                      local function hashfn_29_(_241, _242)
+                      local function hashfn_38_(_241, _242)
                         return ((_241:type() == "select_expression") and (_242 == "expression"))
                       end
-                      select_expression = find_child(node, hashfn_29_)
+                      select_expression = find_child(node, hashfn_38_)
                     else
                       select_expression = nil
                     end
                     local attrset_name
                     if (nil ~= select_expression) then
                       local tmp_3_
-                      local function hashfn_31_(_241, _242)
+                      local function hashfn_40_(_241, _242)
                         return ((_241:type() == "variable_expression") and (_242 == "expression"))
                       end
-                      tmp_3_ = find_child(select_expression, hashfn_31_)
+                      tmp_3_ = find_child(select_expression, hashfn_40_)
                       if (nil ~= tmp_3_) then
                         attrset_name = vim.treesitter.get_node_text(tmp_3_, bufnr0)
                       else
@@ -162,10 +200,10 @@ local function find_all_local_bindings(opts)
                     local attr_name0
                     if (nil ~= select_expression) then
                       local tmp_3_
-                      local function hashfn_34_(_241, _242)
+                      local function hashfn_43_(_241, _242)
                         return ((_241:type() == "attrpath") and (_242 == "attrpath"))
                       end
-                      tmp_3_ = find_child(select_expression, hashfn_34_)
+                      tmp_3_ = find_child(select_expression, hashfn_43_)
                       if (nil ~= tmp_3_) then
                         attr_name0 = vim.treesitter.get_node_text(tmp_3_, bufnr0)
                       else
@@ -175,20 +213,20 @@ local function find_all_local_bindings(opts)
                       attr_name0 = nil
                     end
                     if (attrset_name and attr_name0) then
-                      or_27_ = {["?interp"] = node, name = attr_name0, ["?from"] = attrset_name}
+                      or_36_ = {["?interp"] = node, name = attr_name0, ["?from"] = attrset_name}
                     else
-                      or_27_ = nil
+                      or_36_ = nil
                     end
                   end
-                  val_28_ = or_27_
+                  val_28_ = or_36_
                 else
-                  local and_38_ = (nil ~= case_22_)
-                  if and_38_ then
-                    local t = case_22_
-                    and_38_ = ((t == "string_fragment") or (t == "escape_sequence"))
+                  local and_47_ = (nil ~= case_31_)
+                  if and_47_ then
+                    local t = case_31_
+                    and_47_ = ((t == "string_fragment") or (t == "escape_sequence"))
                   end
-                  if and_38_ then
-                    local t = case_22_
+                  if and_47_ then
+                    local t = case_31_
                     val_28_ = {node = node, value = vim.treesitter.get_node_text(node, bufnr0)}
                   else
                     val_28_ = nil
@@ -203,9 +241,9 @@ local function find_all_local_bindings(opts)
             end
             string_expr = tbl_26_
           else
-            local _let_42_ = coords({bufnr = bufnr0, node = string_expression})
-            local start_row = _let_42_["start-row"]
-            local start_col = _let_42_["start-col"]
+            local _let_51_ = coords({bufnr = bufnr0, node = string_expression})
+            local start_row = _let_51_["start-row"]
+            local start_col = _let_51_["start-col"]
             local msg = string.format("Please don't leave empty strings (row %s, col %s)", (1 + start_row), (1 + start_col))
             vim.notify(msg)
             string_expr = error(msg)
@@ -218,10 +256,10 @@ local function find_all_local_bindings(opts)
       do
         local variable_expression
         if (nil ~= binding) then
-          local function hashfn_45_(_241, _242)
+          local function hashfn_54_(_241, _242)
             return ((_241:type() == "variable_expression") and (_242 == "expression"))
           end
-          variable_expression = find_child(binding, hashfn_45_)
+          variable_expression = find_child(binding, hashfn_54_)
         else
           variable_expression = nil
         end
@@ -235,20 +273,20 @@ local function find_all_local_bindings(opts)
       do
         local select_expression
         if (nil ~= binding) then
-          local function hashfn_48_(_241, _242)
+          local function hashfn_57_(_241, _242)
             return ((_241:type() == "select_expression") and (_242 == "expression"))
           end
-          select_expression = find_child(binding, hashfn_48_)
+          select_expression = find_child(binding, hashfn_57_)
         else
           select_expression = nil
         end
         local attrset_name
         if (nil ~= select_expression) then
           local tmp_3_
-          local function hashfn_50_(_241, _242)
+          local function hashfn_59_(_241, _242)
             return ((_241:type() == "variable_expression") and (_242 == "expression"))
           end
-          tmp_3_ = find_child(select_expression, hashfn_50_)
+          tmp_3_ = find_child(select_expression, hashfn_59_)
           if (nil ~= tmp_3_) then
             attrset_name = vim.treesitter.get_node_text(tmp_3_, bufnr0)
           else
@@ -260,10 +298,10 @@ local function find_all_local_bindings(opts)
         local attr_name0
         if (nil ~= select_expression) then
           local tmp_3_
-          local function hashfn_53_(_241, _242)
+          local function hashfn_62_(_241, _242)
             return ((_241:type() == "attrpath") and (_242 == "attrpath"))
           end
-          tmp_3_ = find_child(select_expression, hashfn_53_)
+          tmp_3_ = find_child(select_expression, hashfn_62_)
           if (nil ~= tmp_3_) then
             attr_name0 = vim.treesitter.get_node_text(tmp_3_, bufnr0)
           else
@@ -278,18 +316,18 @@ local function find_all_local_bindings(opts)
           attr_expr = nil
         end
       end
-      local expr = (string_expr or bool_expr or var_expr or attr_expr)
+      local expr = (string_expr or bool_expr or number_expr or var_expr or attr_expr)
       bindings[attr_name] = expr
     elseif (case_15_ == "inherit") then
       local attrs
-      local function hashfn_57_(_241, _242)
+      local function hashfn_66_(_241, _242)
         return ((_241:type() == "inherited_attrs") and (_242 == "attrs"))
       end
-      attrs = find_child(binding, hashfn_57_)
+      attrs = find_child(binding, hashfn_66_)
       for node, node_name in attrs:iter_children() do
         if ((node:type() == "identifier") and (node_name == "attr")) then
           local attr_name = vim.treesitter.get_node_text(node, bufnr0)
-          bindings[attr_name] = {{name = attr_name}}
+          bindings[attr_name] = {{name = attr_name, ["?inherit"] = true}}
         else
         end
       end
@@ -326,10 +364,10 @@ local function try_get_binding_value(opts)
   end
   local recurse_3f
   do
-    local case_63_ = bounder:parent():type()
-    if (case_63_ == "attrset_expression") then
+    local case_72_ = bounder:parent():type()
+    if (case_72_ == "attrset_expression") then
       recurse_3f = false
-    elseif ((case_63_ == "let_expression") or (case_63_ == "rec_attrset_expression")) then
+    elseif ((case_72_ == "let_expression") or (case_72_ == "rec_attrset_expression")) then
       recurse_3f = true
     else
       recurse_3f = nil
@@ -357,135 +395,135 @@ local function try_get_binding_value(opts)
       parent_bounder = nil
     end
     while true do
-      local and_69_ = parent_bounder
-      if and_69_ then
-        local and_70_ = (parent_bounder:type() ~= "rec_attrset_expression") and (parent_bounder:type() ~= "let_expression")
-        if and_70_ then
-          local and_71_ = (parent_bounder:type() == "attrset_expression")
-          if and_71_ then
+      local and_78_ = parent_bounder
+      if and_78_ then
+        local and_79_ = (parent_bounder:type() ~= "rec_attrset_expression") and (parent_bounder:type() ~= "let_expression")
+        if and_79_ then
+          local and_80_ = (parent_bounder:type() == "attrset_expression")
+          if and_80_ then
             local tmp_3_ = parent_bounder:parent()
             if (nil ~= tmp_3_) then
               local tmp_3_0 = tmp_3_:type()
               if (nil ~= tmp_3_0) then
-                and_71_ = (tmp_3_0 == "function_expression")
+                and_80_ = (tmp_3_0 == "function_expression")
               else
-                and_71_ = nil
+                and_80_ = nil
               end
             else
-              and_71_ = nil
+              and_80_ = nil
             end
           end
-          and_70_ = not and_71_
+          and_79_ = not and_80_
         end
-        local or_76_ = and_70_
-        if not or_76_ then
-          local function hashfn_77_(_241)
+        local or_85_ = and_79_
+        if not or_85_ then
+          local function hashfn_86_(_241)
             return (_241:type() == "binding_set")
           end
-          or_76_ = not find_child(parent_bounder, hashfn_77_)
+          or_85_ = not find_child(parent_bounder, hashfn_86_)
         end
-        and_69_ = or_76_
+        and_78_ = or_85_
       end
-      if not and_69_ then break end
+      if not and_78_ then break end
       parent_bounder = parent_bounder:parent()
     end
     local from0 = nil
     local only_for = nil
-    local if_tgt_78_
+    local if_tgt_87_
     if (nil ~= parent_bounder) then
       local tmp_3_ = parent_bounder:type()
       if (nil ~= tmp_3_) then
-        if_tgt_78_ = (tmp_3_ == "attrset_expression")
+        if_tgt_87_ = (tmp_3_ == "attrset_expression")
       else
-        if_tgt_78_ = nil
+        if_tgt_87_ = nil
       end
     else
-      if_tgt_78_ = nil
+      if_tgt_87_ = nil
     end
-    local and_82_ = if_tgt_78_
-    if and_82_ then
+    local and_91_ = if_tgt_87_
+    if and_91_ then
       if (nil ~= parent_bounder) then
         local tmp_3_ = parent_bounder:parent()
         if (nil ~= tmp_3_) then
           local tmp_3_0 = tmp_3_:type()
           if (nil ~= tmp_3_0) then
-            and_82_ = (tmp_3_0 == "function_expression")
+            and_91_ = (tmp_3_0 == "function_expression")
           else
-            and_82_ = nil
+            and_91_ = nil
           end
         else
-          and_82_ = nil
+          and_91_ = nil
         end
       else
-        and_82_ = nil
+        and_91_ = nil
       end
     end
-    if and_82_ then
+    if and_91_ then
       local parent = parent_bounder:parent()
       local universal_parameter
-      local function hashfn_88_(_241, _242)
+      local function hashfn_97_(_241, _242)
         return ((_241:type() == "identifier") and (_242 == "universal"))
       end
-      universal_parameter = find_child(parent, hashfn_88_)
+      universal_parameter = find_child(parent, hashfn_97_)
       local formals
-      local if_tgt_89_
+      local if_tgt_98_
       if (nil ~= parent) then
         local tmp_3_
-        local function hashfn_91_(_241, _242)
+        local function hashfn_100_(_241, _242)
           return ((_241:type() == "formals") and (_242 == "formals"))
         end
-        tmp_3_ = find_child(parent, hashfn_91_)
+        tmp_3_ = find_child(parent, hashfn_100_)
         if (nil ~= tmp_3_) then
           local tmp_3_0
-          local function hashfn_93_(_241, _242)
-            local and_94_ = (_241:type() == "formal") and (_242 == "formal")
-            if and_94_ then
-              local function hashfn_95_(_2410, _2420)
+          local function hashfn_102_(_241, _242)
+            local and_103_ = (_241:type() == "formal") and (_242 == "formal")
+            if and_103_ then
+              local function hashfn_104_(_2410, _2420)
                 return (_2420 == "default")
               end
-              and_94_ = (find_child(_241, hashfn_95_) == nil)
+              and_103_ = (find_child(_241, hashfn_104_) == nil)
             end
-            return and_94_
+            return and_103_
           end
-          tmp_3_0 = find_children(tmp_3_, hashfn_93_)
+          tmp_3_0 = find_children(tmp_3_, hashfn_102_)
           if (nil ~= tmp_3_0) then
             local tmp_3_1 = vim.iter(tmp_3_0)
             if (nil ~= tmp_3_1) then
               local tmp_3_2
-              local function hashfn_98_(_241)
-                local function hashfn_99_(_2410, _2420)
+              local function hashfn_107_(_241)
+                local function hashfn_108_(_2410, _2420)
                   return (_2420 == "name")
                 end
-                return find_child(_241, hashfn_99_)
+                return find_child(_241, hashfn_108_)
               end
-              tmp_3_2 = tmp_3_1:map(hashfn_98_)
+              tmp_3_2 = tmp_3_1:map(hashfn_107_)
               if (nil ~= tmp_3_2) then
                 local tmp_3_3
-                local function hashfn_101_(_241)
+                local function hashfn_110_(_241)
                   return vim.treesitter.get_node_text(_241, bufnr0)
                 end
-                tmp_3_3 = tmp_3_2:map(hashfn_101_)
+                tmp_3_3 = tmp_3_2:map(hashfn_110_)
                 if (nil ~= tmp_3_3) then
-                  if_tgt_89_ = tmp_3_3:totable()
+                  if_tgt_98_ = tmp_3_3:totable()
                 else
-                  if_tgt_89_ = nil
+                  if_tgt_98_ = nil
                 end
               else
-                if_tgt_89_ = nil
+                if_tgt_98_ = nil
               end
             else
-              if_tgt_89_ = nil
+              if_tgt_98_ = nil
             end
           else
-            if_tgt_89_ = nil
+            if_tgt_98_ = nil
           end
         else
-          if_tgt_89_ = nil
+          if_tgt_98_ = nil
         end
       else
-        if_tgt_89_ = nil
+        if_tgt_98_ = nil
       end
-      formals = (if_tgt_89_ or {})
+      formals = (if_tgt_98_ or {})
       if (universal_parameter ~= nil) then
         from0 = vim.treesitter.get_node_text(universal_parameter, bufnr0)
       else
@@ -494,10 +532,10 @@ local function try_get_binding_value(opts)
     else
     end
     if parent_bounder then
-      local function hashfn_110_(_241)
+      local function hashfn_119_(_241)
         return (_241:type() == "binding_set")
       end
-      parent_bounder = find_child(parent_bounder, hashfn_110_)
+      parent_bounder = find_child(parent_bounder, hashfn_119_)
     else
     end
     return {from = from0, ["only-for"] = only_for, ["parent-bounder"] = parent_bounder}
@@ -507,25 +545,36 @@ local function try_get_binding_value(opts)
   local final_binding
   if binding then
     local find_up
-    local function fn_113_(arg_112_)
-      local fragment = arg_112_.v
+    local function fn_122_(arg_121_)
+      local fragment = arg_121_.v
       if ((_G.type(fragment) == "table") and true and (nil ~= fragment.node) and (nil ~= fragment.value)) then
         local _3finterp = fragment["?interp"]
         local node = fragment.node
         local value = fragment.value
         return {["?interp"] = _3finterp, node = node, value = value}
+      elseif ((_G.type(fragment) == "table") and (nil ~= fragment.name) and (nil ~= fragment["?inherit"])) then
+        local name = fragment.name
+        local inherit_3f = fragment["?inherit"]
+        local _let_123_ = find_parent_bounder()
+        local next_from = _let_123_.from
+        local parent_bounder = _let_123_["parent-bounder"]
+        if parent_bounder then
+          return (try_get_binding_value({bufnr = bufnr0, bounder = parent_bounder, from = next_from, identifier = name, depth = (depth0 + 1), ["depth-limit"] = depth_limit0}) or {{notfound = name}})
+        else
+          return {{notfound = name}}
+        end
       elseif ((_G.type(fragment) == "table") and true and (nil ~= fragment.name) and true) then
         local _3finterp = fragment["?interp"]
         local name = fragment.name
         local _3ffrom = fragment["?from"]
-        local _let_114_ = find_parent_bounder()
-        local next_from = _let_114_.from
-        local only_for = _let_114_["only-for"]
-        local parent_bounder = _let_114_["parent-bounder"]
+        local _let_125_ = find_parent_bounder()
+        local next_from = _let_125_.from
+        local only_for = _let_125_["only-for"]
+        local parent_bounder = _let_125_["parent-bounder"]
         local next_bounder
         if (recurse_3f or (_3ffrom and (from == _3ffrom))) then
           next_bounder = bounder
-        elseif (only_for and not vim.tbl_contains(only_for, name)) then
+        elseif (only_for and _3ffrom and not vim.tbl_contains(only_for, _3ffrom)) then
           if (nil ~= parent_bounder) then
             local tmp_3_ = parent_bounder:parent()
             if (nil ~= tmp_3_) then
@@ -540,7 +589,7 @@ local function try_get_binding_value(opts)
           next_bounder = parent_bounder
         end
         if next_bounder then
-          local resolved = try_get_binding_value({bufnr = bufnr0, bounder = next_bounder, from = next_from, identifier = name, depth = (depth0 + 1), ["depth-limit"] = depth_limit0})
+          local resolved = (try_get_binding_value({bufnr = bufnr0, bounder = next_bounder, from = next_from, identifier = name, depth = (depth0 + 1), ["depth-limit"] = depth_limit0}) or {{notfound = name}})
           for _, fragment0 in ipairs(resolved) do
             if not fragment0["?interp"] then
               fragment0["?interp"] = _3finterp
@@ -558,17 +607,17 @@ local function try_get_binding_value(opts)
         return nil
       end
     end
-    find_up = fn_113_
+    find_up = fn_122_
     local full_fragments
-    local function fn_121_(k, v)
+    local function fn_132_(k, v)
       return find_up({k = k, v = v})
     end
-    full_fragments = vim.iter(ipairs(binding)):map(fn_121_):totable()
+    full_fragments = vim.iter(ipairs(binding)):map(fn_132_):totable()
     final_binding = full_fragments
   else
-    local _let_122_ = find_parent_bounder()
-    local parent_bounder = _let_122_["parent-bounder"]
-    local from0 = _let_122_.from
+    local _let_133_ = find_parent_bounder()
+    local parent_bounder = _let_133_["parent-bounder"]
+    local from0 = _let_133_.from
     if parent_bounder then
       final_binding = try_get_binding_value({bufnr = bufnr0, bounder = parent_bounder, from = from0, identifier = identifier, depth = (depth0 + 1), ["depth-limit"] = depth_limit0})
     else
@@ -604,13 +653,13 @@ local function try_get_binding_bounder(opts)
     for binding, _ in node:iter_children() do
       local val_28_
       do
-        local case_128_ = binding:type()
-        if (case_128_ == "binding") then
+        local case_139_ = binding:type()
+        if (case_139_ == "binding") then
           local attr
-          local function hashfn_129_(_241)
+          local function hashfn_140_(_241)
             return (_241:type() == "attrpath")
           end
-          attr = find_child(binding, hashfn_129_)
+          attr = find_child(binding, hashfn_140_)
           local attr_name
           if attr then
             attr_name = vim.treesitter.get_node_text(attr, bufnr)
@@ -622,17 +671,17 @@ local function try_get_binding_bounder(opts)
           else
             val_28_ = nil
           end
-        elseif (case_128_ == "inherit") then
+        elseif (case_139_ == "inherit") then
           local attrs
-          local function hashfn_132_(_241, _242)
+          local function hashfn_143_(_241, _242)
             return ((_241:type() == "inherited_attrs") and (_242 == "attrs"))
           end
-          attrs = find_child(binding, hashfn_132_)
+          attrs = find_child(binding, hashfn_143_)
           local attr
-          local function hashfn_133_(_241, _242)
+          local function hashfn_144_(_241, _242)
             return ((_241:type() == "identifier") and (_242 == "attr") and (vim.treesitter.get_node_text(_241, bufnr) == name))
           end
-          attr = find_child(attrs, hashfn_133_)
+          attr = find_child(attrs, hashfn_144_)
           val_28_ = attr
         else
           val_28_ = nil
@@ -692,7 +741,7 @@ local function find_used_fetches(opts)
             local k_22_, v_23_
             do
               local capture_id = fetches_query.captures[id]
-              local function if_else_140_()
+              local function if_else_151_()
                 if (capture_id == "_fname") then
                   return vim.treesitter.get_node_text(node, bufnr0)
                 elseif (capture_id == "_fargs") then
@@ -717,7 +766,7 @@ local function find_used_fetches(opts)
                   return nil
                 end
               end
-              k_22_, v_23_ = capture_id, if_else_140_()
+              k_22_, v_23_ = capture_id, if_else_151_()
             end
             if ((k_22_ ~= nil) and (v_23_ ~= nil)) then
               tbl_21_[k_22_] = v_23_
@@ -742,9 +791,9 @@ local function get_fetch_at_cursor(opts)
   local bufnr = opts0.bufnr
   local bufnr0 = (bufnr or vim.api.nvim_get_current_buf())
   local found_fetches = find_used_fetches({bufnr = bufnr0})
-  local _local_143_ = vim.api.nvim_win_get_cursor(0)
-  local cursor_row = _local_143_[1]
-  local cursor_col = _local_143_[2]
+  local _local_154_ = vim.api.nvim_win_get_cursor(0)
+  local cursor_row = _local_154_[1]
+  local cursor_col = _local_154_[2]
   for _, fetch in ipairs(found_fetches) do
     if vim.treesitter.is_in_node_range(fetch._fwhole, (cursor_row - 1), cursor_col) then
       return fetch
@@ -762,20 +811,20 @@ local function calculate_updates(opts)
   for key, new_value in pairs(new_data) do
     local existing
     do
-      local t_145_ = fetch
-      if (nil ~= t_145_) then
-        t_145_ = t_145_._fargs
+      local t_156_ = fetch
+      if (nil ~= t_156_) then
+        t_156_ = t_156_._fargs
       else
       end
-      if (nil ~= t_145_) then
-        t_145_ = t_145_[key]
+      if (nil ~= t_156_) then
+        t_156_ = t_156_[key]
       else
       end
-      if (nil ~= t_145_) then
-        t_145_ = t_145_.fragments
+      if (nil ~= t_156_) then
+        t_156_ = t_156_.fragments
       else
       end
-      existing = t_145_
+      existing = t_156_
     end
     if existing then
       local i_fragment = 1
@@ -791,31 +840,31 @@ local function calculate_updates(opts)
           i_fragment = (i_fragment + 1)
           i_new_value = (i_new_value + #fragment_value)
         elseif (i_fragment == #existing) then
-          local _local_149_ = coords({bufnr = bufnr, node = fragment_node})
-          local start_row = _local_149_["start-row"]
-          local start_col = _local_149_["start-col"]
-          local end_row = _local_149_["end-row"]
-          local end_col = _local_149_["end-col"]
+          local _local_160_ = coords({bufnr = bufnr, node = fragment_node})
+          local start_row = _local_160_["start-row"]
+          local start_col = _local_160_["start-col"]
+          local end_row = _local_160_["end-row"]
+          local end_col = _local_160_["end-col"]
           table.insert(updates, {type = "old", data = {bufnr = bufnr, ["start-row"] = start_row, ["start-col"] = start_col, ["end-row"] = end_row, ["end-col"] = end_col, replacement = {string.sub(new_value, i_new_value)}}})
           short_circuit_3f = true
         else
           local last_fragment = existing[#existing]
           local last_fragment__3finterp = last_fragment["?interp"]
           local last_fragment_node = last_fragment.node
-          local _local_150_ = coords({bufnr = bufnr, node = (fragment__3finterp or fragment_node)})
-          local start_row = _local_150_["start-row"]
-          local start_col = _local_150_["start-col"]
-          local _local_151_ = coords({bufnr = bufnr, node = (last_fragment__3finterp or last_fragment_node)})
-          local end_row = _local_151_["end-row"]
-          local end_col = _local_151_["end-col"]
+          local _local_161_ = coords({bufnr = bufnr, node = (fragment__3finterp or fragment_node)})
+          local start_row = _local_161_["start-row"]
+          local start_col = _local_161_["start-col"]
+          local _local_162_ = coords({bufnr = bufnr, node = (last_fragment__3finterp or last_fragment_node)})
+          local end_row = _local_162_["end-row"]
+          local end_col = _local_162_["end-col"]
           table.insert(updates, {type = "old", data = {bufnr = bufnr, ["start-row"] = start_row, ["start-col"] = start_col, ["end-row"] = end_row, ["end-col"] = end_col, replacement = {string.sub(new_value, i_new_value)}}})
           short_circuit_3f = true
         end
       end
     else
-      local _let_153_ = coords({bufnr = bufnr, node = fetch._fwhole})
-      local end_row = _let_153_["end-row"]
-      local end_col = _let_153_["end-col"]
+      local _let_164_ = coords({bufnr = bufnr, node = fetch._fwhole})
+      local end_row = _let_164_["end-row"]
+      local end_col = _let_164_["end-col"]
       table.insert(updates, {type = "new", data = {bufnr = bufnr, start = end_row, ["end"] = end_row, replacement = {string.format("%s%s = \"%s\";", vim.fn["repeat"](" ", ((end_col - 1) + vim.bo[bufnr].shiftwidth)), key, new_value)}}})
     end
   end
@@ -830,7 +879,7 @@ local function preview_update(update)
     local end_row = update.data["end-row"]
     local end_col = update.data["end-col"]
     local replacement = update.data.replacement
-    local let_155_
+    local let_166_
     do
       local tbl_26_ = {}
       local i_27_ = 0
@@ -842,14 +891,14 @@ local function preview_update(update)
         else
         end
       end
-      let_155_ = tbl_26_
+      let_166_ = tbl_26_
     end
-    return vim.api.nvim_buf_set_extmark(bufnr, namespace, start_row, start_col, {end_row = end_row, end_col = end_col, hl_mode = "replace", virt_text = let_155_, virt_text_pos = "overlay"})
+    return vim.api.nvim_buf_set_extmark(bufnr, namespace, start_row, start_col, {end_row = end_row, end_col = end_col, hl_mode = "replace", virt_text = let_166_, virt_text_pos = "overlay"})
   elseif ((_G.type(update) == "table") and (update.type == "new") and ((_G.type(update.data) == "table") and (nil ~= update.data.bufnr) and (nil ~= update.data.start) and (nil ~= update.data.replacement))) then
     local bufnr = update.data.bufnr
     local start = update.data.start
     local replacement = update.data.replacement
-    local let_157_
+    local let_168_
     do
       local tbl_26_ = {}
       local i_27_ = 0
@@ -861,9 +910,9 @@ local function preview_update(update)
         else
         end
       end
-      let_157_ = tbl_26_
+      let_168_ = tbl_26_
     end
-    return vim.api.nvim_buf_set_extmark(bufnr, namespace, start, 0, {virt_lines = let_157_, virt_lines_above = true})
+    return vim.api.nvim_buf_set_extmark(bufnr, namespace, start, 0, {virt_lines = let_168_, virt_lines_above = true})
   else
     return nil
   end
@@ -936,29 +985,29 @@ local function prefetch_fetch(opts)
   else
   end
   local prefetcher
-  local do_tgt_165_
+  local do_tgt_176_
   do
-    local t_164_ = config
-    if (nil ~= t_164_) then
-      t_164_ = t_164_["extra-prefetchers"]
+    local t_175_ = config
+    if (nil ~= t_175_) then
+      t_175_ = t_175_["extra-prefetchers"]
     else
     end
-    if (nil ~= t_164_) then
-      t_164_ = t_164_[fetch0._fname]
+    if (nil ~= t_175_) then
+      t_175_ = t_175_[fetch0._fname]
     else
     end
-    do_tgt_165_ = t_164_
+    do_tgt_176_ = t_175_
   end
-  local or_168_ = do_tgt_165_
-  if not or_168_ then
-    local t_169_ = prefetchers
-    if (nil ~= t_169_) then
-      t_169_ = t_169_[fetch0._fname]
+  local or_179_ = do_tgt_176_
+  if not or_179_ then
+    local t_180_ = prefetchers
+    if (nil ~= t_180_) then
+      t_180_ = t_180_[fetch0._fname]
     else
     end
-    or_168_ = t_169_
+    or_179_ = t_180_
   end
-  prefetcher = or_168_
+  prefetcher = or_179_
   if not prefetcher then
     vim.notify(string.format("No prefetcher '%s' found", fetch0._fname))
     return nil
@@ -969,18 +1018,18 @@ local function prefetch_fetch(opts)
     local argument_values0 = {}
     local notfounds_pairs = {}
     for farg_name, farg_binding in pairs(fetch0._fargs) do
-      local function fn_172_(result)
+      local function fn_183_(result)
         argument_values0[farg_name] = result
         return nil
       end
-      local function fn_173_(notfounds)
+      local function fn_184_(notfounds)
         return table.insert(notfounds_pairs, {["farg-name"] = farg_name, notfounds = notfounds})
       end
-      Result.bimap(fragments_to_value(farg_binding.fragments), fn_172_, fn_173_)
+      Result.bimap(fragments_to_value(farg_binding.fragments), fn_183_, fn_184_)
     end
-    for _, each_174_ in ipairs(notfounds_pairs) do
-      local farg_name = each_174_["farg-name"]
-      local notfounds = each_174_.notfounds
+    for _, each_185_ in ipairs(notfounds_pairs) do
+      local farg_name = each_185_["farg-name"]
+      local notfounds = each_185_.notfounds
       vim.notify(string.format("Identifiers %s not found while evaluating %s!", vim.inspect(notfounds), farg_name))
     end
     if (#notfounds_pairs > 0) then
@@ -995,9 +1044,9 @@ local function prefetch_fetch(opts)
     return nil
   else
   end
-  local function fn_178_(arg_177_)
-    local stdout = arg_177_.stdout
-    local stderr = arg_177_.stderr
+  local function fn_189_(arg_188_)
+    local stdout = arg_188_.stdout
+    local stderr = arg_188_.stderr
     if (#stdout == 0) then
       cache[fetch0._fwhole] = {bufnr = bufnr0, fetch = fetch0, err = string.format("Oopsie: %s", vim.inspect(stderr))}
       return nil
@@ -1006,7 +1055,7 @@ local function prefetch_fetch(opts)
     cache[fetch0._fwhole] = {bufnr = bufnr0, fetch = fetch0, data = prefetcher.extractor(stdout)}
     return nil
   end
-  call_command(prefetcher_cmd, fn_178_)
+  call_command(prefetcher_cmd, fn_189_)
   return vim.notify(string.format("Prefetch initiated, awaiting response..."))
 end
 return {["fetches-query-string"] = fetches_query_string, ["gen-fetches-names"] = gen_fetches_names, ["gen-fetches-query"] = gen_fetches_query, ["get-root"] = get_root, ["find-all-local-bindings"] = find_all_local_bindings, ["try-get-binding-value"] = try_get_binding_value, ["fragments-to-value"] = fragments_to_value, ["find-used-fetches"] = find_used_fetches, ["get-fetch-at-cursor"] = get_fetch_at_cursor, ["calculate-updates"] = calculate_updates, ["preview-update"] = preview_update, ["apply-update"] = apply_update, ["notify-update"] = notify_update, ["flash-update"] = flash_update, ["prefetch-fetch"] = prefetch_fetch}

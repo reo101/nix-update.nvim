@@ -135,6 +135,30 @@
                               (when (vim.list_contains [:true :false] bool-expr-value)
                                 [{:node bool-expr
                                   :value bool-expr-value}]))))
+            number-expr (let [number? #(vim.list_contains
+                                         [:integer_expression :float_expression]
+                                         ($1:type))
+                              number-expression
+                              (or (find-child
+                                    binding
+                                    #(and (= $2 "expression")
+                                          (number? $1)))
+                                  (let [unary-expression
+                                         (find-child
+                                           binding
+                                           #(and (= $2 "expression")
+                                                 (= ($1:type)
+                                                    "unary_expression")))]
+                                    (when (and unary-expression
+                                               (find-child unary-expression
+                                                           #(and (= $2 "argument")
+                                                                 (number? $1))))
+                                      unary-expression)))]
+                          (when number-expression
+                            [{:node  number-expression
+                              :value (vim.treesitter.get_node_text
+                                       number-expression
+                                       bufnr)}]))
             string-expr (let [string-expression
                                (find-child
                                  binding
@@ -233,6 +257,7 @@
                              :?from attrset-name}]))
             expr (or string-expr
                      bool-expr
+                     number-expr
                      var-expr
                      attr-expr)]
         (tset bindings attr-name expr))
@@ -250,7 +275,8 @@
                               node
                               bufnr)]
               ;;; NOTE: `inherit attr;` is the same as `attr = attr;`
-              (tset bindings attr-name [{:name attr-name}])))))))
+              (tset bindings attr-name [{:name attr-name
+                                         :?inherit true}])))))))
 
   ;;; Return the accumulated bindings
   bindings)
@@ -423,6 +449,21 @@
                     ;;; Final value - Return
                     {: ?interp : node : value}
                     {: ?interp : node : value}
+                    ;;; An inherited binding refers to the enclosing scope
+                    {: name :?inherit inherit?}
+                    (let [{:from next-from
+                           : parent-bounder} (find-parent-bounder)]
+                      (if parent-bounder
+                        (or (try-get-binding-value
+                              {: bufnr
+                               :bounder parent-bounder
+                               :from next-from
+                               :identifier name
+                               :depth (+ depth 1)
+                               : depth-limit})
+                            [{:notfound name}])
+                        ;; else
+                        [{:notfound name}]))
                     ;;; Variable reference - Recurse for name
                     {: ?interp : name : ?from}
                     (let [{:from next-from
@@ -435,13 +476,15 @@
                                    (and ?from
                                         (= from ?from)))
                                bounder
+                               ;; else
                                ;; NOTE: not in destructured attrs
                                ;;       -> directly skip upwards
                                ;; TODO: somehow carry `only-for` as an arg
                                (and only-for
+                                    ?from
                                     (not (vim.tbl_contains
                                            only-for
-                                           name)))
+                                           ?from)))
                                (-?> parent-bounder
                                     (: :parent)
                                     (: :parent))
@@ -451,18 +494,20 @@
                                parent-bounder)]
                       (if next-bounder
                         ;; Search upwards*
-                        (let [resolved (try-get-binding-value
-                                         {: bufnr
-                                          :bounder next-bounder
-                                          :from next-from
-                                          :identifier name
-                                          :depth (+ depth 1)
-                                          : depth-limit})]
+                        (let [resolved (or (try-get-binding-value
+                                             {: bufnr
+                                              :bounder next-bounder
+                                              :from next-from
+                                              :identifier name
+                                              :depth (+ depth 1)
+                                              : depth-limit})
+                                           [{:notfound name}])]
                           ;;; When no upper-level interpolation - keep old one
                           (each [_ fragment (ipairs resolved)]
                             (when (not fragment.?interp)
                               (tset fragment :?interp ?interp)))
                           resolved)
+                        ;; else
                         ;; Nowhere to search
                         [{:notfound name}]))
                     ;;; Not found - leave be
