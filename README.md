@@ -225,6 +225,25 @@ in rec {
 
 I'm not really sure how often would this be of help but it's cool to have it nonetheless. 😄
 
+### Function-style derivations
+
+`finalAttrs` in function-style `mkDerivation` calls and dream2nix's `config`
+references resolve like recursive attribute sets:
+
+```nix
+stdenv.mkDerivation (finalAttrs: {
+  pname = "nix-update.nvim";
+  version = "0.1.2";
+
+  src = fetchFromGitHub {
+    owner = "reo101";
+    repo = finalAttrs.pname;
+    rev = finalAttrs.version;
+    hash = "sha256-SOMEOUTDATEDHASH";
+  };
+})
+```
+
 ## Development
 
 The `lua` folder is the compilation output of all files from the `fnl` directory.
@@ -299,14 +318,6 @@ nix develop .#ci -c make check
 This check script bootstraps `nfnl` and `plenary.nvim` via `vim.pack.add`.
 
 Use `:checkhealth nix-update` to inspect runtime/config/dependency health.
-
-## TODO
-
-- More commands
-- More prefetchers
-- Simpler prefetch commands (not just system ones, maybe lua functions)
-- Style guidelines (with optional enforcement)
-- Telescope pickers for selective updating
 
 ## Credits
 - Original inspiration: [https://github.com/jwiegley/nix-update-el](https://github.com/jwiegley/nix-update-el)
