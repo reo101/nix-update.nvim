@@ -49,7 +49,11 @@
               packages = [
                 pkgs.neovim
                 pkgs.git
+                pkgs.tree-sitter-grammars.tree-sitter-nix
               ];
+
+              NIX_UPDATE_NIX_PARSER =
+                "${pkgs.tree-sitter-grammars.tree-sitter-nix}/parser";
             };
           };
       });
