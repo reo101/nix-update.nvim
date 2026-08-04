@@ -76,10 +76,20 @@ require("nix-update").setup({
   -- Default: { "apply", "notify" }
   update_actions = { "apply", "flash", "notify" },
 
-  -- Extra prefetcher commands
-  -- table of tables, where each one looks like this:
+  -- Extra prefetchers
   extra_prefetchers = {
-    ["myFetch"] = {
+    -- (function) Called as `fn(args, done)`
+    -- Return new fields synchronously or call `done(fields)` later
+    -- Call `done(nil, err)` to report an error
+    myLuaFetch = function(args, done)
+      if args.url then
+        return { hash = "sha256-..." }
+      end
+      done(nil, "url is required")
+    end,
+
+    -- Command prefetchers still use this table form
+    ["myCommandFetch"] = {
       -- (array of strings) Array of required system commands
       ["required-cmds"] = { "cmd1", "cmd2" },
       -- (array of strings) Array of required "fetch" keys
@@ -120,7 +130,8 @@ require("nix-update").setup({
 
 **NOTES:**
 - The table is empty by default
-- `required-cmds` and `required-keys` are optional
+- Lua functions receive resolved fetch fields and `done`
+- `required-cmds` and `required-keys` are optional for command prefetchers
 - You can override the builtin definitions by using the same name
 - `extra_prefetcher_cmds` is still accepted as a backwards-compatible alias
 - Invalid options are validated and reported with `vim.notify(..., ERROR)`
