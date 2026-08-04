@@ -652,14 +652,14 @@
   ;;; Get found fetches
   (local found-fetches (find-used-fetches {: bufnr}))
 
-  ;;; Get cursor position
-  (local [_ cursor-row cursor-col _ _] (vim.fn.getcursorcharpos))
+  ;;; Get cursor position (`vim.treesitter` uses 0-based byte coordinates)
+  (local [cursor-row cursor-col] (vim.api.nvim_win_get_cursor 0))
 
   ;;; (Try to) find a fetch containing the cursor
   (each [_ fetch (ipairs found-fetches)]
     (when (vim.treesitter.is_in_node_range
             fetch._fwhole
-            cursor-row
+            (- cursor-row 1)
             cursor-col)
       (lua "return fetch"))))
 

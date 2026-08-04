@@ -742,14 +742,11 @@ local function get_fetch_at_cursor(opts)
   local bufnr = opts0.bufnr
   local bufnr0 = (bufnr or vim.api.nvim_get_current_buf())
   local found_fetches = find_used_fetches({bufnr = bufnr0})
-  local _local_143_ = vim.fn.getcursorcharpos()
-  local _ = _local_143_[1]
-  local cursor_row = _local_143_[2]
-  local cursor_col = _local_143_[3]
-  local _0 = _local_143_[4]
-  local _1 = _local_143_[5]
-  for _2, fetch in ipairs(found_fetches) do
-    if vim.treesitter.is_in_node_range(fetch._fwhole, cursor_row, cursor_col) then
+  local _local_143_ = vim.api.nvim_win_get_cursor(0)
+  local cursor_row = _local_143_[1]
+  local cursor_col = _local_143_[2]
+  for _, fetch in ipairs(found_fetches) do
+    if vim.treesitter.is_in_node_range(fetch._fwhole, (cursor_row - 1), cursor_col) then
       return fetch
     else
     end
