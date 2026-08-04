@@ -5,12 +5,11 @@ SRC_DIR ?= fnl
 RES_DIR ?= lua
 
 FNL_SRC = $(shell find $(SRC_DIR) -type f -name "*.fnl" -and -not -iname "*macro*")
-
 LUA_RES = $(patsubst $(SRC_DIR)/%.fnl,$(RES_DIR)/%.lua,$(FNL_SRC))
 
-all: $(LUA_RES)
+all: $(LUA_RES) scripts/check.lua
 
-check:
+check: all
 	nvim --headless -u NONE -c 'set rtp+=.' -c 'lua dofile("scripts/check.lua")' -c 'qall!'
 
 check-ci:
@@ -20,6 +19,10 @@ fennel: all
 
 $(RES_DIR)/%.lua: $(SRC_DIR)/%.fnl
 	@mkdir -p $(shell dirname $@)
+	@echo "Compiling '$(<)' into '$(@)'"
+	@{ printf '%s\n' '-- [nfnl] $<'; $(FENNEL) $(FENNEL_FLAGS) --compile $<; } >$@.tmp && mv $@.tmp $@
+
+scripts/check.lua: scripts/check.fnl
 	@echo "Compiling '$(<)' into '$(@)'"
 	@{ printf '%s\n' '-- [nfnl] $<'; $(FENNEL) $(FENNEL_FLAGS) --compile $<; } >$@.tmp && mv $@.tmp $@
 
