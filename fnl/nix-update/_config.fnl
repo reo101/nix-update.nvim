@@ -20,7 +20,8 @@
 (tset config :extra-prefetchers (create-proxied))
 (config.extra-prefetchers
   {:handler (fn [new _key value]
-              (when new
+              (when (and new
+                         (= (type value) :table))
                 (setmetatable value prefetcher-mt)))})
 
 (tset config :update-actions (vim.deepcopy default-update-actions))
@@ -35,8 +36,9 @@
         (var err nil)
         (each [name prefetcher (pairs extra-prefetchers)]
           (when (and (not err)
-                     (not= (type prefetcher) :table))
-            (set err (string.format "`extra-prefetchers.%s` must be a table" name)))
+                     (not (or (= (type prefetcher) :function)
+                              (= (type prefetcher) :table))))
+            (set err (string.format "`extra-prefetchers.%s` must be a function or table" name)))
           (when (and (not err)
                      (= (type prefetcher) :table)
                      (not= (type prefetcher.prefetcher) :function))

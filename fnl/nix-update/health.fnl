@@ -31,9 +31,10 @@
   (each [_ prefetcher (pairs prefetchers)]
     (each [_ cmd (ipairs (or prefetcher.required-cmds []))]
       (tset required-cmds cmd true)))
-  (each [_ prefetcher (pairs (or config.extra-prefetchers {}))]
-    (each [_ cmd (ipairs (or prefetcher.required-cmds []))]
-      (tset required-cmds cmd true)))
+  (each [_ prefetcher (pairs (or (config.extra-prefetchers) {}))]
+    (when (= (type prefetcher) :table)
+      (each [_ cmd (ipairs (or prefetcher.required-cmds []))]
+        (tset required-cmds cmd true))))
   (vim.tbl_keys required-cmds))
 
 (fn check-config []

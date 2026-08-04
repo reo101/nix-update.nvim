@@ -48,7 +48,7 @@
                   (: :map (fn [k _] k))
                   (: :totable))]
     (vim.list_extend names
-                     (-> (or (?. config :extra-prefetchers) {})
+                     (-> (or (config.extra-prefetchers) {})
                          pairs
                          vim.iter
                          (: :map (fn [k _] k))
@@ -472,7 +472,7 @@
                           ;;; NOTE: `recurse?` matters here
                           next-bounder
                            (if (or recurse?
-                                   ;; TODO: should this be here?
+                                   ;; NOTE: keep current universal argument references in this binder
                                    (and ?from
                                         (= from ?from)))
                                bounder
@@ -970,7 +970,7 @@
     (vim.notify "No fetch (neither given nor one at cursor)")
     (lua "return nil"))
 
-  ;;; Get correct prefetcher cmd generator
+  ;;; Get configured prefetcher
   (local prefetcher
          ;;; NOTE: referencing user-defined cmds
          (or (?. config :extra-prefetchers fetch._fname)
@@ -1017,40 +1017,65 @@
            ;;; Return the accumulated values
            argument-values))
 
-  ;;; Get the commands components
-  (local prefetcher-cmd
-         (prefetcher argument-values))
+  (if (= (type prefetcher) :function)
+    (do
+      (var done? false)
+      (local done
+             (fn [data err]
+               (when (not done?)
+                 (set done? true)
+                 (if (= (type data) :table)
+                   (tset cache fetch._fwhole
+                         {: bufnr
+                          : fetch
+                          : data})
+                   (tset cache fetch._fwhole
+                         {: bufnr
+                          : fetch
+                          :err (string.format
+                                 "Lua prefetcher failed: %s"
+                                 (vim.inspect (or err data "no result")))})))))
+      (let [(ok data) (pcall prefetcher argument-values done)]
+        (if ok
+          (when data
+            (done data))
+          (done nil data))))
+    ;; else
+    (do
+      ;;; Get the commands components
+      (local prefetcher-cmd
+             (prefetcher argument-values))
 
-  ;;; Early return if invalid
-  (when (not prefetcher-cmd)
-    (vim.notify
-      (string.format
-        "Could not generate command for the prefetcher '%s'"
-        fetch._fname))
-    (lua "return nil"))
-
-  ;;; Call the command (will see results through `sed`)
-  (call-command
-    prefetcher-cmd
-    (fn [{: stdout : stderr}]
-      (when (= (length stdout) 0)
-        (tset
-          cache
-          fetch._fwhole
-          {: bufnr
-           : fetch
-           :err (string.format
-                  "Oopsie: %s"
-                  (vim.inspect
-                    stderr))})
+      ;;; Early return if invalid
+      (when (not prefetcher-cmd)
+        (vim.notify
+          (string.format
+            "Could not generate command for the prefetcher '%s'"
+            fetch._fname))
         (lua "return nil"))
-      ;;; Cache the prefetched data
-      (tset
-        cache
-        fetch._fwhole
-        {: bufnr
-         : fetch
-         :data (prefetcher.extractor stdout)})))
+
+      ;;; Call the command (will see results through `sed`)
+      (call-command
+        prefetcher-cmd
+        (fn [{: stdout : stderr}]
+          (when (= (length stdout) 0)
+            (tset
+              cache
+              fetch._fwhole
+              {: bufnr
+               : fetch
+               :err (string.format
+                      "Oopsie: %s"
+                      (vim.inspect
+                        stderr))})
+            (lua "return nil"))
+          ;;; Cache the prefetched data
+          (tset
+            cache
+            fetch._fwhole
+            {: bufnr
+             : fetch
+             :data (prefetcher.extractor stdout)})))))
 
   ;;; Notify user that we are now waiting
   (vim.notify
