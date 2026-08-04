@@ -29,7 +29,7 @@
 
 ;;; Monad
 (fn Option.pure [...]
-  (Option.ok ...))
+  (Option.some ...))
 (fn Option.join [mx]
   (match mx
     [:some [:some & x]] (values (unpack x))))
