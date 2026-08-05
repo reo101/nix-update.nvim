@@ -1,17 +1,14 @@
 FENNEL ?= fennel
-FENNEL_FLAGS ?= --correlate --no-compiler-sandbox --add-macro-path $(SRC_DIR)
+FENNEL_FLAGS ?= --correlate --add-macro-path '$(SRC_DIR)/?.fnlm'
 
 SRC_DIR ?= fnl
 RES_DIR ?= lua
 
-FNL_SRC    = $(shell find $(SRC_DIR) -type f -name "*.fnl" -and -not -iname "*macro*")
-FNL_MACROS = $(shell find $(SRC_DIR) -type f -name "*macro*.fnl")
+FNL_SRC = $(shell find $(SRC_DIR) -type f -name "*.fnl" -and -not -iname "*macro*")
 
 LUA_RES = $(patsubst $(SRC_DIR)/%.fnl,$(RES_DIR)/%.lua,$(FNL_SRC))
 
-# Compile all files using `nfnl` (requires `nvim` with `nfnl` installed)
-all:
-	nvim --headless -c 'lua require("nfnl.api")["compile-all-files"](".")' -c "q"
+all: $(LUA_RES)
 
 check:
 	nvim --headless -u NONE -c 'set rtp+=.' -c 'lua dofile("scripts/check.lua")' -c 'qall!'
@@ -19,17 +16,12 @@ check:
 check-ci:
 	nix develop .#ci -c $(MAKE) check
 
-# Compile using standalone `fennel` compiler
-fennel: $(LUA_RES)
+fennel: all
 
 $(RES_DIR)/%.lua: $(SRC_DIR)/%.fnl
 	@mkdir -p $(shell dirname $@)
 	@echo "Compiling '$(<)' into '$(@)'"
-	@$(FENNEL) \
-		--correlate \
-		--no-compiler-sandbox \
-		--add-macro-path $(FNL_MACROS) \
-		--compile $(<) > $(@)
+	@{ printf '%s\n' '-- [nfnl] $<'; $(FENNEL) $(FENNEL_FLAGS) --compile $<; } >$@.tmp && mv $@.tmp $@
 
 clean:
 	rm -rf $(RES_DIR)
