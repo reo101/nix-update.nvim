@@ -943,9 +943,8 @@
        :inclusive true
        :timeout 1000})))
 
-;;; Prefetch given fetch
-;;; store its results in the global state table
-(fn prefetch-fetch [opts]
+;;; Prefetch given fetch inside a structured async task.
+(fn prefetch-fetch-task [opts]
   ;;; Extract opts
   (local opts (or opts {}))
   (local {: bufnr
@@ -959,11 +958,6 @@
   ;;; Get selected fetch (cursor or at cursor)
   (local fetch (or fetch
                    (get-fetch-at-cursor {: bufnr})))
-
-  ;; ;;; Early return if there is no callback
-  ;; (when (not= (type callback) :function)
-  ;;   (vim.notify "Callback is not a function")
-  ;;   (lua "return nil"))
 
   ;;; Early return if there is no fetch
   (when (not fetch)
@@ -1017,35 +1011,40 @@
            ;;; Return the accumulated values
            argument-values))
 
+  (vim.notify "Prefetch initiated, awaiting response...")
+
+  ;;; Lua prefetchers retain their callback API, but the task owns the wait.
   (if (= (type prefetcher) :function)
     (do
-      (var done? false)
-      (local done
-             (fn [data err]
-               (when (not done?)
-                 (set done? true)
-                 (if (= (type data) :table)
-                   (tset cache fetch._fwhole
-                         {: bufnr
-                          : fetch
-                          : data})
-                   (tset cache fetch._fwhole
-                         {: bufnr
-                          : fetch
-                          :err (string.format
-                                 "Lua prefetcher failed: %s"
-                                 (vim.inspect (or err data "no result")))})))))
-      (let [(ok data) (pcall prefetcher argument-values done)]
-        (if ok
-          (when data
-            (done data))
-          (done nil data))))
-    ;; else
-    (do
-      ;;; Get the commands components
-      (local prefetcher-cmd
-             (prefetcher argument-values))
-
+      (local result
+             (vim.async.await
+               (fn [done]
+                 (var done? false)
+                 (local finish
+                        (fn [data err]
+                          (when (not done?)
+                            (set done? true)
+                            (done {: data : err}))))
+                 (let [(ok data) (pcall prefetcher argument-values finish)]
+                   (if ok
+                     (when data
+                       (finish data))
+                     (finish nil data))))))
+      (local data result.data)
+      (local err result.err)
+      (if (= (type data) :table)
+        (tset cache fetch._fwhole
+              {: bufnr
+               : fetch
+               : data})
+        (tset cache fetch._fwhole
+              {: bufnr
+               : fetch
+               :err (string.format
+                      "Lua prefetcher failed: %s"
+                      (vim.inspect (or err data "no result")))})))
+    ;; else: command prefetcher
+    (let [prefetcher-cmd (prefetcher argument-values)]
       ;;; Early return if invalid
       (when (not prefetcher-cmd)
         (vim.notify
@@ -1054,33 +1053,25 @@
             fetch._fname))
         (lua "return nil"))
 
-      ;;; Call the command (will see results through `sed`)
-      (call-command
-        prefetcher-cmd
-        (fn [{: stdout : stderr}]
-          (when (= (length stdout) 0)
-            (tset
-              cache
-              fetch._fwhole
+      (local {: stdout : stderr}
+             (call-command prefetcher-cmd))
+      (if (= (length stdout) 0)
+        (tset cache fetch._fwhole
               {: bufnr
                : fetch
                :err (string.format
                       "Oopsie: %s"
-                      (vim.inspect
-                        stderr))})
-            (lua "return nil"))
-          ;;; Cache the prefetched data
-          (tset
-            cache
-            fetch._fwhole
-            {: bufnr
-             : fetch
-             :data (prefetcher.extractor stdout)})))))
+                      (vim.inspect stderr))})
+        (tset cache fetch._fwhole
+              {: bufnr
+               : fetch
+               :data (prefetcher.extractor stdout)}))))
 
-  ;;; Notify user that we are now waiting
-  (vim.notify
-    (string.format
-      "Prefetch initiated, awaiting response...")))
+  nil)
+
+;;; Start a prefetch without blocking the caller.
+(fn prefetch-fetch [opts]
+  (vim.async.run #(prefetch-fetch-task opts)))
 
 {: fetches-query-string
  : gen-fetches-names

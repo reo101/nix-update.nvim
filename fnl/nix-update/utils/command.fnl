@@ -1,47 +1,21 @@
-(local uv (or vim.uv vim.loop))
+(local async vim.async)
 
-;;; Define helper to run async commands using libuv
-(fn call-command [{: cmd : args} callback]
-  ;;; Define pipes
-  (local stdout (uv.new_pipe))
-  (local stderr (uv.new_pipe))
+(fn split-output [output]
+  (if (= output "")
+      []
+      (vim.split output "\n" {:plain true :trimempty true})))
 
-  ;;; Define options
-  (local options {: args
-                  :stdio [nil stdout stderr]})
+;;; Run a command without owning pipes, handles, or scheduling details.
+(fn call-command [{: cmd : args}]
+  (local result
+         (async.await
+           (fn [done]
+             (vim.system
+               (vim.list_extend [cmd] args)
+               {:text true}
+               done))))
 
-  ;;; Declare handle
-  (var handle nil)
-
-  ;;; Define result (will be appended to by `on-read`)
-  (local result {:stdout []
-                 :stderr []})
-
-  ;;; Define on-exit handler
-  (fn on-exit [_code _status]
-    (each [_ pipe (ipairs [stdout stderr])]
-      (uv.read_stop pipe)
-      (uv.close pipe))
-    (uv.close handle)
-    (vim.schedule #(callback result)))
-
-  ;;; Define on-read handlers (will append to `result`)
-  (fn on-read [pipe]
-    (fn [_status data]
-      (when data
-        (each [val (vim.gsplit data "\n")]
-          (when (not= val "")
-            (table.insert
-              (. result pipe)
-              val))))))
-
-  ;;; Spawn command
-  (set handle (uv.spawn cmd options on-exit))
-
-  ;;; Start reading
-  (uv.read_start stdout (on-read :stdout))
-  (uv.read_start stderr (on-read :stderr))
-
-  nil)
+  {:stdout (split-output result.stdout)
+   :stderr (split-output result.stderr)})
 
 {: call-command}

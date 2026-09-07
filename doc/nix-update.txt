@@ -1,4 +1,4 @@
-*nix-update.txt*           For NVIM v0.8.0          Last change: 2026 March 26
+*nix-update.txt*Dynamically and asynchronously update fetch-like Nix attributes
 
 ==============================================================================
 Table of Contents                               *nix-update-table-of-contents*
@@ -7,7 +7,6 @@ Table of Contents                               *nix-update-table-of-contents*
   - Configuration                                   |nix-update-configuration|
   - Usage                                                   |nix-update-usage|
   - Development                                       |nix-update-development|
-  - TODO                                                     |nix-update-todo|
   - Credits                                               |nix-update-credits|
 
 
@@ -16,7 +15,7 @@ INSTALLATION                                         *nix-update-installation*
 
 REQUIREMENTS ~
 
-- nvim with `vim.pack` support (`0.12+`)
+- nvim 0.13+ (uses `vim.async`)
 - **[Optional]** `nix-prefetch-url` <https://github.com/NixOS/nixpkgs/blob/master/pkgs/build-support/fetchgit/nix-prefetch-git> (and possibly more, checkout the included prefetchers here <./fnl/nix-update/prefetchers.fnl>)
 
 
@@ -83,10 +82,20 @@ UPDATE ACTIONS ~
       -- Default: { "apply", "notify" }
       update_actions = { "apply", "flash", "notify" },
     
-      -- Extra prefetcher commands
-      -- table of tables, where each one looks like this:
+      -- Extra prefetchers
       extra_prefetchers = {
-        ["myFetch"] = {
+        -- (function) Called as `fn(args, done)`
+        -- Return new fields synchronously or call `done(fields)` later
+        -- Call `done(nil, err)` to report an error
+        myLuaFetch = function(args, done)
+          if args.url then
+            return { hash = "sha256-..." }
+          end
+          done(nil, "url is required")
+        end,
+    
+        -- Command prefetchers still use this table form
+        ["myCommandFetch"] = {
           -- (array of strings) Array of required system commands
           ["required-cmds"] = { "cmd1", "cmd2" },
           -- (array of strings) Array of required "fetch" keys
@@ -125,11 +134,12 @@ UPDATE ACTIONS ~
     })
 <
 
-**NOTES:** - The table is empty by default - `required-cmds` and
-`required-keys` are optional - You can override the builtin definitions by
-using the same name - `extra_prefetcher_cmds` is still accepted as a
-backwards-compatible alias - Invalid options are validated and reported with
-`vim.notify(..., ERROR)`
+**NOTES:** - The table is empty by default - Lua functions receive resolved
+fetch fields and `done` - `required-cmds` and `required-keys` are optional for
+command prefetchers - You can override the builtin definitions by using the
+same name - `extra_prefetcher_cmds` is still accepted as a backwards-compatible
+alias - Invalid options are validated and reported with `vim.notify(...,
+ERROR)`
 
 
 USAGE                                                       *nix-update-usage*
@@ -240,6 +250,26 @@ I’m not really sure how often would this be of help but it’s cool to have
 it nonetheless. 😄
 
 
+FUNCTION-STYLE DERIVATIONS ~
+
+`finalAttrs` in function-style `mkDerivation` calls and dream2nix’s `config`
+references resolve like recursive attribute sets:
+
+>nix
+    stdenv.mkDerivation (finalAttrs: {
+      pname = "nix-update.nvim";
+      version = "0.1.2";
+    
+      src = fetchFromGitHub {
+        owner = "reo101";
+        repo = finalAttrs.pname;
+        rev = finalAttrs.version;
+        hash = "sha256-SOMEOUTDATEDHASH";
+      };
+    })
+<
+
+
 DEVELOPMENT                                           *nix-update-development*
 
 The `lua` folder is the compilation output of all files from the `fnl`
@@ -269,9 +299,6 @@ Run checks in the CI-equivalent shell:
 >bash
     nix develop .#ci -c make check
 <
-
-The check runner intentionally requires `vim.pack.add` and bootstraps `nfnl` +
-`plenary.nvim` through `vim.pack` only.
 
 To compile all files at once:
 
@@ -320,18 +347,7 @@ For reproducible checks with pinned tooling:
     nix develop .#ci -c make check
 <
 
-This check script bootstraps `nfnl` and `plenary.nvim` via `vim.pack.add`.
-
 Use `:checkhealth nix-update` to inspect runtime/config/dependency health.
-
-
-TODO                                                         *nix-update-todo*
-
-- More commands
-- More prefetchers
-- Simpler prefetch commands (not just system ones, maybe lua functions)
-- Style guidelines (with optional enforcement)
-- Telescope pickers for selective updating
 
 
 CREDITS                                                   *nix-update-credits*

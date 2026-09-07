@@ -89,9 +89,7 @@
   (vim.diagnostic.set
     namespace
     bufnr
-    ;;; NOTE: there should be no race condition here
-    ;;;       since everything is run synchronously
-    ;;;       on the event loop (`:help vim.schedule()`)
+    ;;; NOTE: cache writes happen in `vim.async` tasks on the event loop.
     (-> (vim.diagnostic.get
           nil
           {: namespace})

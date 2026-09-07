@@ -99,8 +99,6 @@
 
 
 
-
-
  local function remove_diagnostic(opts)
 
  local opts0 = (opts or {})

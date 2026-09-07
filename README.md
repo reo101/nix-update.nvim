@@ -5,7 +5,7 @@
 Dynamically and asynchronously update attributes of *fetch-like* constructions in Nix
 
 ![License](https://img.shields.io/github/license/reo101/nix-update.nvim)
-![Neovim version](https://img.shields.io/badge/Neovim-0.12%2B-57A143?logo=neovim)
+![Neovim version](https://img.shields.io/badge/Neovim-0.13%2B-57A143?logo=neovim)
 
 </div>
 
@@ -19,7 +19,7 @@ Dynamically and asynchronously update attributes of *fetch-like* constructions i
 
 ### Requirements
 
-- nvim with `vim.pack` support (`0.12+`)
+- nvim 0.13+ (uses `vim.async`)
 - **[Optional]** [`nix-prefetch-url`](https://github.com/NixOS/nixpkgs/blob/master/pkgs/build-support/fetchgit/nix-prefetch-git) (and possibly more, checkout the included prefetchers [here](./fnl/nix-update/prefetchers.fnl))
 
 #### Lazy.nvim
@@ -279,8 +279,6 @@ Run checks in the CI-equivalent shell:
 nix develop .#ci -c make check
 ```
 
-The check runner intentionally requires `vim.pack.add` and bootstraps `nfnl` + `plenary.nvim` through `vim.pack` only.
-
 To compile all files at once:
 
 ```vim
@@ -325,8 +323,6 @@ For reproducible checks with pinned tooling:
 ```bash
 nix develop .#ci -c make check
 ```
-
-This check script bootstraps `nfnl` and `plenary.nvim` via `vim.pack.add`.
 
 Use `:checkhealth nix-update` to inspect runtime/config/dependency health.
 

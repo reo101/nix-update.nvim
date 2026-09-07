@@ -5,10 +5,8 @@
   (when (not value)
     (fail msg)))
 
-(assert-truthy (and vim.pack vim.pack.add)
-               "vim.pack.add is required for checks")
-
-(vim.pack.add ["https://github.com/nvim-lua/plenary.nvim"])
+(assert-truthy (and vim.async vim.async.run vim.async.await)
+               "vim.async is required for checks")
 
 (tset vim.g :nix_update
       {:update_actions [:preview :notify]})
@@ -47,6 +45,16 @@
 (assert-truthy (= (?. nix-update.config :update-actions 1)
                   :apply)
                "setup overrides did not apply")
+
+(local {: call-command} (require :nix-update.utils))
+(local command-task
+       (vim.async.run
+         #(let [{: stdout}
+                (call-command {:cmd "printf"
+                               :args ["async-ok\\n"]})]
+            (assert-truthy (= (table.concat stdout) "async-ok")
+                           "vim.async command prefetch did not finish"))))
+(command-task:wait 1000)
 
 (local commands (require :nix-update.commands))
 (commands.register)
@@ -157,8 +165,7 @@
     (local cache (require :nix-update._cache))
     (assert-truthy
       (vim.wait 1000
-                (fn []
-                  (not= (. cache.cache fetch._fwhole) nil)))
+                #(not= (. cache.cache fetch._fwhole) nil))
       (.. label ": prefetch did not finish"))
     (assert-truthy (= (. cache.cache fetch._fwhole :data :hash)
                       expected)
@@ -177,8 +184,7 @@
     (fn [args done]
       (assert-truthy (= args.url "https://example.com")
                      "asynchronous Lua prefetcher: wrong args")
-      (vim.schedule (fn []
-                      (done {:hash "async-hash"}))))
+      (vim.schedule #(done {:hash "async-hash"})))
     "async-hash"))
 
 (local health (require :nix-update.health))
