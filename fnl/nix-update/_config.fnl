@@ -29,9 +29,10 @@
 (fn validate-extra-prefetchers [extra-prefetchers]
   (if (not (or (= extra-prefetchers nil)
                (= (type extra-prefetchers) :table)))
-    (values false "`extra-prefetchers` must be a table")
-    (if (not= (type extra-prefetchers) :table)
+      (values false "`extra-prefetchers` must be a table")
+      (not= (type extra-prefetchers) :table)
       (values true nil)
+      ;; else
       (do
         (var err nil)
         (each [name prefetcher (pairs extra-prefetchers)]
@@ -50,7 +51,7 @@
             (set err (string.format "`extra-prefetchers.%s.extractor` must be a function when set" name))))
         (if err
           (values false err)
-          (values true nil))))))
+          (values true nil)))))
 
 (fn validate-update-actions [update-actions]
   (if (not (or (= update-actions nil)
@@ -85,13 +86,13 @@
                                opts.extra-prefetcher-cmds)]
       (let [(ok-prefetchers err-prefetchers)
             (validate-extra-prefetchers extra-prefetchers)]
-      (if (not ok-prefetchers)
-        (values false err-prefetchers)
-        (let [(ok-actions err-actions)
-              (validate-update-actions opts.update-actions)]
-          (if (not ok-actions)
-            (values false err-actions)
-            (values true nil))))))))
+       (if (not ok-prefetchers)
+         (values false err-prefetchers)
+         (let [(ok-actions err-actions)
+               (validate-update-actions opts.update-actions)]
+           (if (not ok-actions)
+             (values false err-actions)
+             (values true nil))))))))
 
 (fn apply-options [opts]
   (local opts (or opts {}))

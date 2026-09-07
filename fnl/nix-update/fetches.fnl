@@ -1016,7 +1016,7 @@
   ;;; Lua prefetchers retain their callback API, but the task owns the wait.
   (if (= (type prefetcher) :function)
     (do
-      (local result
+      (local {: data : err}
              (vim.async.await
                (fn [done]
                  (var done? false)
@@ -1030,8 +1030,6 @@
                      (when data
                        (finish data))
                      (finish nil data))))))
-      (local data result.data)
-      (local err result.err)
       (if (= (type data) :table)
         (tset cache fetch._fwhole
               {: bufnr

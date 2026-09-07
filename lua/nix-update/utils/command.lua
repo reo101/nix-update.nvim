@@ -1,6 +1,4 @@
 -- [nfnl] fnl/nix-update/utils/command.fnl
- local async = vim.async
-
  local function split_output(output)
  if (output == "") then
  return {} else
@@ -11,7 +9,7 @@
  local result
 
  local function fn_3_(done)
- return vim.system(vim.list_extend({cmd}, args), {text = true}, done) end result = async.await(fn_3_)
+ return vim.system(vim.list_extend({cmd}, args), {text = true}, done) end result = vim.async.await(fn_3_)
 
 
 

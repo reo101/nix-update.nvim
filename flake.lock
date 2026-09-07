@@ -3,11 +3,11 @@
     "fennel-src": {
       "flake": false,
       "locked": {
-        "lastModified": 1785933512,
-        "narHash": "sha256-eoUBa5IftQXtDDzutoSSrp2f7m8DhFL+/GKCsowhhe8=",
+        "lastModified": 1788825372,
+        "narHash": "sha256-o23IkImj/QaezZZxaCyI37xSVLu7EmMXFLq4sDATMX4=",
         "owner": "reo101",
         "repo": "Fennel",
-        "rev": "ede156f495137a8b114dfc6af4b012ff69085f47",
+        "rev": "874b074e56c81f441fc4418c1645aaa99fdb0160",
         "type": "github"
       },
       "original": {

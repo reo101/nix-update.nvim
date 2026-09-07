@@ -26,6 +26,7 @@
       url = "github:kdheepak/panvimdoc/v4.0.1";
       flake = false;
     };
+
   };
 
   outputs =

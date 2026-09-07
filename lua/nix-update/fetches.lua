@@ -1017,7 +1017,7 @@
 
  if (type(prefetcher) == "function") then
 
- local result
+
 
  local function fn_184_(done) local done_3f = false
 
@@ -1030,9 +1030,7 @@
  if ok then
  if data then
  return finish(data) else return nil end else
- return finish(nil, data) end end result = vim.async.await(fn_184_)
- local data = result.data
- local err = result.err
+ return finish(nil, data) end end local _local_189_ = vim.async.await(fn_184_) local data = _local_189_.data local err = _local_189_.err
  if (type(data) == "table") then
  cache[fetch0._fwhole] = {bufnr = bufnr0, fetch = fetch0, data = data} else
 
@@ -1054,7 +1052,7 @@
 
  return nil else end
 
- local _local_191_ = call_command(prefetcher_cmd) local stdout = _local_191_.stdout local stderr = _local_191_.stderr
+ local _local_192_ = call_command(prefetcher_cmd) local stdout = _local_192_.stdout local stderr = _local_192_.stderr
 
  if (#stdout == 0) then
  cache[fetch0._fwhole] = {bufnr = bufnr0, fetch = fetch0, err = string.format("Oopsie: %s", vim.inspect(stderr))} else
@@ -1072,6 +1070,6 @@
 
 
  local function prefetch_fetch(opts)
- local function hashfn_194_() return prefetch_fetch_task(opts) end return vim.async.run(hashfn_194_) end
+ local function hashfn_195_() return prefetch_fetch_task(opts) end return vim.async.run(hashfn_195_) end
 
  return {["fetches-query-string"] = fetches_query_string, ["gen-fetches-names"] = gen_fetches_names, ["gen-fetches-query"] = gen_fetches_query, ["get-root"] = get_root, ["find-all-local-bindings"] = find_all_local_bindings, ["try-get-binding-value"] = try_get_binding_value, ["fragments-to-value"] = fragments_to_value, ["find-used-fetches"] = find_used_fetches, ["get-fetch-at-cursor"] = get_fetch_at_cursor, ["calculate-updates"] = calculate_updates, ["preview-update"] = preview_update, ["apply-update"] = apply_update, ["notify-update"] = notify_update, ["flash-update"] = flash_update, ["prefetch-fetch"] = prefetch_fetch}
