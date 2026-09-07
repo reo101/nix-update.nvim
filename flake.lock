@@ -93,12 +93,30 @@
         "type": "github"
       }
     },
+    "panvimdoc-src": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1711586990,
+        "narHash": "sha256-HmEBPkNELHC7Xy0v730sQWZyPPwFdIBUcELzNtrWwzQ=",
+        "owner": "kdheepak",
+        "repo": "panvimdoc",
+        "rev": "662fb20304d20c539fb48a0bda628f5165507de7",
+        "type": "github"
+      },
+      "original": {
+        "owner": "kdheepak",
+        "ref": "v4.0.1",
+        "repo": "panvimdoc",
+        "type": "github"
+      }
+    },
     "root": {
       "inputs": {
         "fennel-src": "fennel-src",
         "flake-parts": "flake-parts",
         "neovim-nightly-overlay": "neovim-nightly-overlay",
         "nixpkgs": "nixpkgs",
+        "panvimdoc-src": "panvimdoc-src",
         "systems": "systems"
       }
     },

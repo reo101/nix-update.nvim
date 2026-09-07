@@ -12,6 +12,11 @@ all: $(LUA_RES) scripts/check.lua
 check: all
 	nvim --headless -u NONE -c 'set rtp+=.' -c 'lua dofile("scripts/check.lua")' -c 'qall!'
 
+docs:
+	$(PANVIMDOC) --project-name nix-update --input-file README.md \
+		--vim-version "NVIM v0.13.0" \
+		--description "Dynamically and asynchronously update fetch-like Nix attributes"
+
 check-ci:
 	nix develop .#ci -c $(MAKE) check
 

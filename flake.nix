@@ -21,6 +21,11 @@
       inputs.flake-parts.follows = "flake-parts";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+
+    panvimdoc-src = {
+      url = "github:kdheepak/panvimdoc/v4.0.1";
+      flake = false;
+    };
   };
 
   outputs =
@@ -57,18 +62,23 @@
               packages = [
                 pkgs.neovim
                 pkgs.git
+                pkgs.pandoc
                 fennel
               ];
+
+              PANVIMDOC = "${inputs.panvimdoc-src}/panvimdoc.sh";
             };
 
             devShells.ci = pkgs.mkShell {
               packages = [
                 pkgs.neovim
                 pkgs.git
+                pkgs.pandoc
                 pkgs.tree-sitter-grammars.tree-sitter-nix
                 fennel
               ];
 
+              PANVIMDOC = "${inputs.panvimdoc-src}/panvimdoc.sh";
               NIX_UPDATE_NIX_PARSER =
                 "${pkgs.tree-sitter-grammars.tree-sitter-nix}/parser";
             };

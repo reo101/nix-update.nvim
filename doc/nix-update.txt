@@ -300,6 +300,12 @@ Run checks in the CI-equivalent shell:
     nix develop .#ci -c make check
 <
 
+Regenerate `doc/nix-update.txt` locally:
+
+>bash
+    nix develop .#default -c make docs
+<
+
 To compile all files at once:
 
 >vim

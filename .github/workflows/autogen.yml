@@ -2,25 +2,27 @@ name: vimdoc
 
 on:
   push:
-    branches:
-      - master
-    path:
+    paths: &docs_paths
       - "README.md"
+      - "doc/nix-update.txt"
+      - ".github/workflows/autogen.yml"
+  pull_request:
+    paths: *docs_paths
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
-  vimdocgen:
-    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/master' }}
-    runs-on: [ubuntu-latest]
+  vimdoc:
+    runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - name: panvimdoc
-        uses: kdheepak/panvimdoc@main
+        uses: kdheepak/panvimdoc@v4.0.1
         with:
           vimdoc: nix-update
-      - uses: stefanzweifel/git-auto-commit-action@v4
-        with:
-          commit_message: "chore(docs): auto generate vimdoc"
-          commit_user_name: "github-actions[bot]"
-          commit_user_email: "github-actions[bot]@users.noreply.github.com"
-          commit_author: "github-actions[bot] <github-actions[bot]@users.noreply.github.com>"
+          version: "NVIM v0.13.0"
+          description: "Dynamically and asynchronously update fetch-like Nix attributes"
+      - name: check generated vimdoc
+        run: git diff --exit-code -- doc/nix-update.txt
