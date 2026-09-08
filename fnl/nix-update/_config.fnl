@@ -26,6 +26,18 @@
 
 (tset config :update-actions (vim.deepcopy default-update-actions))
 
+(fn validate-prefetcher [name prefetcher]
+  (if (not (or (= (type prefetcher) :function)
+               (= (type prefetcher) :table)))
+      (string.format "`extra-prefetchers.%s` must be a function or table" name)
+      (if (and (= (type prefetcher) :table)
+               (not= (type prefetcher.prefetcher) :function))
+          (string.format "`extra-prefetchers.%s.prefetcher` must be a function" name)
+          (when (and (= (type prefetcher) :table)
+                     prefetcher.extractor
+                     (not= (type prefetcher.extractor) :function))
+            (string.format "`extra-prefetchers.%s.extractor` must be a function when set" name)))))
+
 (fn validate-extra-prefetchers [extra-prefetchers]
   (if (not (or (= extra-prefetchers nil)
                (= (type extra-prefetchers) :table)))
@@ -36,19 +48,8 @@
       (do
         (var err nil)
         (each [name prefetcher (pairs extra-prefetchers)]
-          (when (and (not err)
-                     (not (or (= (type prefetcher) :function)
-                              (= (type prefetcher) :table))))
-            (set err (string.format "`extra-prefetchers.%s` must be a function or table" name)))
-          (when (and (not err)
-                     (= (type prefetcher) :table)
-                     (not= (type prefetcher.prefetcher) :function))
-            (set err (string.format "`extra-prefetchers.%s.prefetcher` must be a function" name)))
-          (when (and (not err)
-                     (= (type prefetcher) :table)
-                     prefetcher.extractor
-                     (not= (type prefetcher.extractor) :function))
-            (set err (string.format "`extra-prefetchers.%s.extractor` must be a function when set" name))))
+          (when (not err)
+            (set err (validate-prefetcher name prefetcher))))
         (if err
           (values false err)
           (values true nil)))))

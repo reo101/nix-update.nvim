@@ -27,6 +27,18 @@
 
  config["update-actions"] = vim.deepcopy(default_update_actions)
 
+ local function validate_prefetcher(name, prefetcher)
+ if not ((type(prefetcher) == "function") or (type(prefetcher) == "table")) then
+
+ return string.format("`extra-prefetchers.%s` must be a function or table", name) else
+ if ((type(prefetcher) == "table") and (type(prefetcher.prefetcher) ~= "function")) then
+
+ return string.format("`extra-prefetchers.%s.prefetcher` must be a function", name) else
+ if ((type(prefetcher) == "table") and prefetcher.extractor and (type(prefetcher.extractor) ~= "function")) then
+
+
+ return string.format("`extra-prefetchers.%s.extractor` must be a function when set", name) else return nil end end end end
+
  local function validate_extra_prefetchers(extra_prefetchers)
  if not ((extra_prefetchers == nil) or (type(extra_prefetchers) == "table")) then
 
@@ -37,19 +49,8 @@
 
  local err = nil
  for name, prefetcher in pairs(extra_prefetchers) do
- if (not err and not ((type(prefetcher) == "function") or (type(prefetcher) == "table"))) then
-
-
- err = string.format("`extra-prefetchers.%s` must be a function or table", name) else end
- if (not err and (type(prefetcher) == "table") and (type(prefetcher.prefetcher) ~= "function")) then
-
-
- err = string.format("`extra-prefetchers.%s.prefetcher` must be a function", name) else end
- if (not err and (type(prefetcher) == "table") and prefetcher.extractor and (type(prefetcher.extractor) ~= "function")) then
-
-
-
- err = string.format("`extra-prefetchers.%s.extractor` must be a function when set", name) else end end
+ if not err then
+ err = validate_prefetcher(name, prefetcher) else end end
  if err then
  return false, err else
  return true, nil end end end
@@ -63,8 +64,8 @@
 
  local err = nil
  for i, action in ipairs(update_actions) do
- local and_9_ = not err
- if and_9_ then local do_tgt_11_ do local t_10_ = valid_update_actions if (nil ~= t_10_) then t_10_ = t_10_[action] else end do_tgt_11_ = t_10_ end and_9_ = not do_tgt_11_ end if and_9_ then
+ local and_10_ = not err
+ if and_10_ then local do_tgt_12_ do local t_11_ = valid_update_actions if (nil ~= t_11_) then t_11_ = t_11_[action] else end do_tgt_12_ = t_11_ end and_10_ = not do_tgt_12_ end if and_10_ then
 
  err = string.format("`update-actions[%d]` must be one of: apply, flash, notify, preview", i) else end end
 
@@ -77,8 +78,8 @@
  local err = nil
 
  for key, _ in pairs(opts) do
- local and_17_ = not err
- if and_17_ then local do_tgt_19_ do local t_18_ = valid_option_keys if (nil ~= t_18_) then t_18_ = t_18_[key] else end do_tgt_19_ = t_18_ end and_17_ = not do_tgt_19_ end if and_17_ then
+ local and_18_ = not err
+ if and_18_ then local do_tgt_20_ do local t_19_ = valid_option_keys if (nil ~= t_19_) then t_19_ = t_19_[key] else end do_tgt_20_ = t_19_ end and_18_ = not do_tgt_20_ end if and_18_ then
  err = string.format("Unknown setup option `%s`", key) else end end
 
  if err then
