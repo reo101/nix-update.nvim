@@ -11,7 +11,7 @@
              (vim.system
                (vim.list_extend [cmd] args)
                {:text true}
-               done))))
+               (vim.schedule_wrap done)))))
 
   {:stdout (split-output result.stdout)
    :stderr (split-output result.stderr)})

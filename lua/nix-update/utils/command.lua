@@ -9,7 +9,7 @@
  local result
 
  local function fn_3_(done)
- return vim.system(vim.list_extend({cmd}, args), {text = true}, done) end result = vim.async.await(fn_3_)
+ return vim.system(vim.list_extend({cmd}, args), {text = true}, vim.schedule_wrap(done)) end result = vim.async.await(fn_3_)
 
 
 

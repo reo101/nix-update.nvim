@@ -1025,12 +1025,12 @@
  local function fn_185_(data, err)
  if not done_3f then done_3f = true
 
- return done({data = data, err = err}) else return nil end end finish = fn_185_
+ local function hashfn_186_() return done({data = data, err = err}) end return vim.schedule(hashfn_186_) else return nil end end finish = fn_185_
  local ok, data = pcall(prefetcher, argument_values, finish)
  if ok then
  if data then
  return finish(data) else return nil end else
- return finish(nil, data) end end local _local_189_ = vim.async.await(fn_184_) local data = _local_189_.data local err = _local_189_.err
+ return finish(nil, data) end end local _local_190_ = vim.async.await(fn_184_) local data = _local_190_.data local err = _local_190_.err
  if (type(data) == "table") then
  cache[fetch0._fwhole] = {bufnr = bufnr0, fetch = fetch0, data = data} else
 
@@ -1052,7 +1052,7 @@
 
  return nil else end
 
- local _local_192_ = call_command(prefetcher_cmd) local stdout = _local_192_.stdout local stderr = _local_192_.stderr
+ local _local_193_ = call_command(prefetcher_cmd) local stdout = _local_193_.stdout local stderr = _local_193_.stderr
 
  if (#stdout == 0) then
  cache[fetch0._fwhole] = {bufnr = bufnr0, fetch = fetch0, err = string.format("Oopsie: %s", vim.inspect(stderr))} else
@@ -1070,6 +1070,6 @@
 
 
  local function prefetch_fetch(opts)
- local function hashfn_195_() return prefetch_fetch_task(opts) end return vim.async.run(hashfn_195_) end
+ local function hashfn_196_() return prefetch_fetch_task(opts) end return vim.async.run(hashfn_196_) end
 
  return {["fetches-query-string"] = fetches_query_string, ["gen-fetches-names"] = gen_fetches_names, ["gen-fetches-query"] = gen_fetches_query, ["get-root"] = get_root, ["find-all-local-bindings"] = find_all_local_bindings, ["try-get-binding-value"] = try_get_binding_value, ["fragments-to-value"] = fragments_to_value, ["find-used-fetches"] = find_used_fetches, ["get-fetch-at-cursor"] = get_fetch_at_cursor, ["calculate-updates"] = calculate_updates, ["preview-update"] = preview_update, ["apply-update"] = apply_update, ["notify-update"] = notify_update, ["flash-update"] = flash_update, ["prefetch-fetch"] = prefetch_fetch}

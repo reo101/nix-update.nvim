@@ -73,8 +73,7 @@
  if self["required-cmds"] then
  local missing
 
-
- local function fn_14_(_, cmd) return (vim.fn.executable(cmd) == 0) end missing = vim.iter(ipairs(self["required-cmds"])):filter(fn_14_):totable()
+ local function fn_14_(cmd) return (vim.fn.executable(cmd) == 0) end missing = vim.iter(self["required-cmds"]):filter(fn_14_):totable()
 
  if (#missing > 0) then
  vim.notify(string.format("Missing commands: %s", table.concat(missing, ", ")))

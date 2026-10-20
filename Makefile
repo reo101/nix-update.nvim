@@ -10,7 +10,7 @@ LUA_RES = $(patsubst $(SRC_DIR)/%.fnl,$(RES_DIR)/%.lua,$(FNL_SRC))
 all: $(LUA_RES) scripts/check.lua
 
 check: all
-	nvim --headless -u NONE -c 'set rtp+=.' -c 'lua dofile("scripts/check.lua")' -c 'qall!'
+	nvim --headless -u NONE --cmd 'set rtp+=.' -l scripts/check.lua
 
 docs:
 	$(PANVIMDOC) --project-name nix-update --input-file README.md \

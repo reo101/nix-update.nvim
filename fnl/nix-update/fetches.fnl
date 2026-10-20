@@ -1024,7 +1024,7 @@
                         (fn [data err]
                           (when (not done?)
                             (set done? true)
-                            (done {: data : err}))))
+                            (vim.schedule #(done {: data : err})))))
                  (let [(ok data) (pcall prefetcher argument-values finish)]
                    (if ok
                      (when data

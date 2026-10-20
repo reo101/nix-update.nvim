@@ -53,8 +53,37 @@
                 (call-command {:cmd "printf"
                                :args ["async-ok\\n"]})]
             (assert-truthy (= (table.concat stdout) "async-ok")
-                           "vim.async command prefetch did not finish"))))
+                           "vim.async command prefetch did not finish")
+            (assert-truthy (not (vim.in_fast_event))
+                           "command completion resumed in a fast event"))))
 (command-task:wait 1000)
+
+(local {: prefetcher-mt} (require :nix-update.utils))
+(let [original-notify vim.notify
+      notifications []]
+  (var called? false)
+  (local prefetcher
+         (setmetatable
+           {:required-cmds ["nix-update-nonexistent-prefetch-command"]
+            :prefetcher (fn [_] (set called? true))}
+           prefetcher-mt))
+  (set vim.notify #(table.insert notifications $1))
+  (let [(ok result) (pcall prefetcher {})]
+    (set vim.notify original-notify)
+    (assert-truthy ok "missing command validation raised an error")
+    (assert-truthy (= result nil) "missing command validation did not abort")
+    (assert-truthy (not called?) "prefetcher ran without its required command")
+    (assert-truthy (= (. notifications 1)
+                      "Missing commands: nix-update-nonexistent-prefetch-command")
+                   "missing command diagnostic is incorrect")))
+
+(let [expected {:cmd vim.v.progpath :args []}
+      prefetcher (setmetatable
+                   {:required-cmds [vim.v.progpath]
+                    :prefetcher (fn [_] expected)}
+                   prefetcher-mt)]
+  (assert-truthy (= (prefetcher {}) expected)
+                 "available command validation blocked the prefetcher"))
 
 (local commands (require :nix-update.commands))
 (commands.register)
@@ -145,9 +174,30 @@
       "\n")
     {:repo "lighthouse" :rev "v1.0"})
 
+  (nix-update.setup
+    {:update_actions [:apply]
+     :extra_prefetchers
+       {:commandFetch
+         {:required-cmds ["printf"]
+          :prefetcher (fn [_] {:cmd "printf" :args ["command-hash"]})
+          :extractor (fn [stdout] {:hash (. stdout 1)})}}})
+  (let [bufnr (vim.api.nvim_create_buf false true)
+        fetches (require :nix-update.fetches)]
+    (tset vim.bo bufnr :filetype :nix)
+    (vim.api.nvim_buf_set_lines
+      bufnr 0 -1 false
+      ["commandFetch { hash = \"old\"; }"])
+    (local fetch (. (fetches.find-used-fetches {:bufnr bufnr}) 1))
+    (local task (fetches.prefetch-fetch {:bufnr bufnr :fetch fetch}))
+    (task:wait 1000)
+    (assert-truthy
+      (= (. (vim.api.nvim_buf_get_lines bufnr 0 -1 false) 1)
+         "commandFetch { hash = \"command-hash\"; }")
+      "command prefetch did not update the buffer"))
+
   (fn assert-lua-prefetch [label runner expected]
     (nix-update.setup
-      {:update_actions []
+      {:update_actions [:apply]
        :extra_prefetchers {:luaFetch runner}})
 
     (local bufnr (vim.api.nvim_create_buf false true))
@@ -160,16 +210,17 @@
     (local fetch (. (fetches.find-used-fetches {:bufnr bufnr}) 1))
     (assert-truthy fetch (.. label ": fetch was not found"))
 
-    (fetches.prefetch-fetch {:bufnr bufnr :fetch fetch})
+    (local task (fetches.prefetch-fetch {:bufnr bufnr :fetch fetch}))
+    (task:wait 1000)
 
     (local cache (require :nix-update._cache))
-    (assert-truthy
-      (vim.wait 1000
-                #(not= (. cache.cache fetch._fwhole) nil))
-      (.. label ": prefetch did not finish"))
-    (assert-truthy (= (. cache.cache fetch._fwhole :data :hash)
+    (assert-truthy (= (?. cache.cache fetch._fwhole :data :hash)
                       expected)
-                   (.. label ": wrong hash")))
+                   (.. label ": wrong hash"))
+    (assert-truthy
+      (= (. (vim.api.nvim_buf_get_lines bufnr 0 -1 false) 1)
+         (string.format "luaFetch { url = \"https://example.com\"; hash = \"%s\"; }" expected))
+      (.. label ": buffer was not updated")))
 
   (assert-lua-prefetch
     "synchronous Lua prefetcher"
@@ -185,7 +236,18 @@
       (assert-truthy (= args.url "https://example.com")
                      "asynchronous Lua prefetcher: wrong args")
       (vim.schedule #(done {:hash "async-hash"})))
-    "async-hash"))
+    "async-hash")
+
+  (assert-lua-prefetch
+    "fast-event Lua prefetcher"
+    (fn [_args done]
+      (local timer (vim.uv.new_timer))
+      (timer:start 0 0
+        (fn []
+          (timer:close)
+          (done {:hash "timer-hash"})))
+      nil)
+    "timer-hash"))
 
 (local health (require :nix-update.health))
 (health.check)

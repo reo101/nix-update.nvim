@@ -71,9 +71,8 @@
      ;;; Check for missing cmds
      (when self.required-cmds
        (let [missing (-> self.required-cmds
-                         ipairs
                          vim.iter
-                         (: :filter (fn [_ cmd] (= (vim.fn.executable cmd) 0)))
+                         (: :filter (fn [cmd] (= (vim.fn.executable cmd) 0)))
                          (: :totable))]
          (when (> (length missing) 0)
            (vim.notify
