@@ -13,8 +13,7 @@
 (local {: find-child
         : find-children
         : coords
-        : flatten-fragments
-        : call-command}
+        : flatten-fragments}
        (require :nix-update.utils))
 
 ;;; Define TS query for getting the fetches
@@ -1013,57 +1012,31 @@
 
   (vim.notify "Prefetch initiated, awaiting response...")
 
-  ;;; Lua prefetchers retain their callback API, but the task owns the wait.
-  (if (= (type prefetcher) :function)
-    (do
-      (local {: data : err}
-             (vim.async.await
-               (fn [done]
-                 (var done? false)
-                 (local finish
-                        (fn [data err]
-                          (when (not done?)
-                            (set done? true)
-                            (vim.schedule #(done {: data : err})))))
-                 (let [(ok data) (pcall prefetcher argument-values finish)]
-                   (if ok
-                     (when data
-                       (finish data))
-                     (finish nil data))))))
-      (if (= (type data) :table)
-        (tset cache fetch._fwhole
-              {: bufnr
-               : fetch
-               : data})
-        (tset cache fetch._fwhole
-              {: bufnr
-               : fetch
-               :err (string.format
-                      "Lua prefetcher failed: %s"
-                      (vim.inspect (or err data "no result")))})))
-    ;; else: command prefetcher
-    (let [prefetcher-cmd (prefetcher argument-values)]
-      ;;; Early return if invalid
-      (when (not prefetcher-cmd)
-        (vim.notify
-          (string.format
-            "Could not generate command for the prefetcher '%s'"
-            fetch._fname))
-        (lua "return nil"))
-
-      (local {: stdout : stderr}
-             (call-command prefetcher-cmd))
-      (if (= (length stdout) 0)
-        (tset cache fetch._fwhole
-              {: bufnr
-               : fetch
-               :err (string.format
-                      "Oopsie: %s"
-                      (vim.inspect stderr))})
-        (tset cache fetch._fwhole
-              {: bufnr
-               : fetch
-               :data (prefetcher.extractor stdout)}))))
+  ;;; Protect factory invocation, task execution, and result validation together.
+  (let [(ok result)
+        (vim.async.pawait
+          (vim.async.run
+            (fn []
+              (local task (prefetcher argument-values))
+              (assert (= (type task) :table)
+                      "Prefetcher must return a vim.async.Task")
+              (local data (vim.async.await task))
+              (assert (= (type data) :table)
+                      "Prefetch task must return a table of fields")
+              (each [key value (pairs data)]
+                (assert (and (= (type key) :string)
+                             (= (type value) :string))
+                        "Prefetch task fields must have string keys and values"))
+              data)))]
+    ;;; User tasks can complete in fast events. Apply results on the main loop.
+    (vim.async.await vim.schedule)
+    (tset cache fetch._fwhole
+          (if ok
+            {: bufnr : fetch :data result}
+            {: bufnr : fetch
+             :err (string.format "Prefetcher '%s' failed: %s"
+                                 fetch._fname
+                                 (vim.inspect result))})))
 
   nil)
 

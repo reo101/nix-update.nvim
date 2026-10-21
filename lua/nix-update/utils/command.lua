@@ -14,7 +14,8 @@
 
 
 
- return {stdout = split_output(result.stdout), stderr = split_output(result.stderr)} end
+ return {code = result.code, stdout = split_output(result.stdout), stderr = split_output(result.stderr)} end
+
 
 
  return {["call-command"] = call_command}

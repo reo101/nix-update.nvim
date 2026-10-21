@@ -34,10 +34,9 @@
  if ((type(prefetcher) == "table") and (type(prefetcher.prefetcher) ~= "function")) then
 
  return string.format("`extra-prefetchers.%s.prefetcher` must be a function", name) else
- if ((type(prefetcher) == "table") and prefetcher.extractor and (type(prefetcher.extractor) ~= "function")) then
+ if ((type(prefetcher) == "table") and (type(prefetcher.extractor) ~= "function")) then
 
-
- return string.format("`extra-prefetchers.%s.extractor` must be a function when set", name) else return nil end end end end
+ return string.format("`extra-prefetchers.%s.extractor` must be a function", name) else return nil end end end end
 
  local function validate_extra_prefetchers(extra_prefetchers)
  if not ((extra_prefetchers == nil) or (type(extra_prefetchers) == "table")) then

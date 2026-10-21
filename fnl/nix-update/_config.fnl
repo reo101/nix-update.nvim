@@ -34,9 +34,8 @@
                (not= (type prefetcher.prefetcher) :function))
           (string.format "`extra-prefetchers.%s.prefetcher` must be a function" name)
           (when (and (= (type prefetcher) :table)
-                     prefetcher.extractor
                      (not= (type prefetcher.extractor) :function))
-            (string.format "`extra-prefetchers.%s.extractor` must be a function when set" name)))))
+            (string.format "`extra-prefetchers.%s.extractor` must be a function" name)))))
 
 (fn validate-extra-prefetchers [extra-prefetchers]
   (if (not (or (= extra-prefetchers nil)

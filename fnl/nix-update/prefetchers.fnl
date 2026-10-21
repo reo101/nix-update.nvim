@@ -176,7 +176,7 @@
         : args})
     :extractor nurl-json-hash-extractor}})
 
-;;; Make all prefetchers (tables) callable (for common error handling)
+;;; Calling a command table creates a task that returns the extracted fields.
 (each [_ prefetcher (pairs prefetchers)]
   (setmetatable prefetcher prefetcher-mt))
 

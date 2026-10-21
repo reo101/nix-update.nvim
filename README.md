@@ -78,23 +78,25 @@ require("nix-update").setup({
 
   -- Extra prefetchers
   extra_prefetchers = {
-    -- (function) Called as `fn(args, done)`
-    -- Return new fields synchronously or call `done(fields)` later
-    -- Call `done(nil, err)` to report an error
-    myLuaFetch = function(args, done)
-      if args.url then
+    -- fun(args: table<string, string>): vim.async.Task<table<string, string>>
+    -- Create a new task for each request
+    myLuaFetch = function(args)
+      return vim.async.run(function()
+        assert(args.url, "url is required")
+        -- Await work with vim.async.await(...) here
         return { hash = "sha256-..." }
-      end
-      done(nil, "url is required")
+      end)
     end,
 
-    -- Command prefetchers still use this table form
+    -- Callable after setup:
+    -- fun(args: table<string, string>): vim.async.Task<table<string, string>>
     ["myCommandFetch"] = {
-      -- (array of strings) Array of required system commands
+      -- string[]? Required system commands
       ["required-cmds"] = { "cmd1", "cmd2" },
-      -- (array of strings) Array of required "fetch" keys
+      -- (string|string[])[]? Required fetch keys; nested lists mean any-of
       ["required-keys"] = { "repo", "user" },
-      -- (function) Function to run to generate a command
+      -- fun(opts: table<string, string>): { cmd: string, args: string[] }
+      -- Generate the command
       ["prefetcher"] = function(opts)
         -- guaranteed to be non-nil
         local repo = opts.repo
@@ -102,7 +104,7 @@ require("nix-update").setup({
         -- extra (nonrequired/optional) keys, could be nil
         local submodules = opts.submodules
 
-        -- has to return a table of `cmd` and `opts`
+        -- Return a table with `cmd` and `args`
         return {
           cmd = "cmd1",
           args = {
@@ -113,9 +115,10 @@ require("nix-update").setup({
           },
         }
       end,
-      -- (function) Function to run to extract the new data
+      -- fun(stdout: string[]): table<string, string>
+      -- Extract replacement fields from the command output
       ["extractor"] = function(stdout)
-        -- array of lines from funning the corresponding command
+        -- Array of lines from the command output
         local first_line = stdout[1]
 
         -- has to return a table with new value for the keys
@@ -128,13 +131,34 @@ require("nix-update").setup({
 })
 ```
 
-**NOTES:**
-- The table is empty by default
-- Lua functions receive resolved fetch fields and `done`
-- `required-cmds` and `required-keys` are optional for command prefetchers
-- You can override the builtin definitions by using the same name
-- `extra_prefetcher_cmds` is still accepted as a backwards-compatible alias
-- Invalid options are validated and reported with `vim.notify(..., ERROR)`
+### Prefetcher tasks
+
+A task factory is a function that creates a task per request.
+Lua prefetchers receive resolved fetch fields and must return a new
+`vim.async.Task`. Inside the task, use `vim.async.await()` to wait for other
+work. Return a table of replacement fields with string values.
+To report a failure, raise an error inside the task.
+
+Command tables are task factories too. During setup, the plugin makes each
+command table callable. Calling the table creates a task that validates its
+requirements, runs the command, and returns the extracted fields.
+Both `prefetcher` and `extractor` functions are required.
+Nonzero command exit codes fail the task, even when the command writes output.
+
+The plugin awaits each task before it applies the returned fields.
+Do not detach the task. Cancelling a request cancels its attached tasks.
+
+Wrap existing synchronous prefetcher bodies in `vim.async.run(function() ... end)`.
+
+> [!WARNING]
+> Direct field returns and the `done` callback API are no longer supported.
+> For callback-based work, use `vim.async.await()` inside the task instead.
+
+- `extra_prefetchers` is empty by default.
+- `required-cmds` and `required-keys` are optional for command tables.
+- Use a builtin name to override its prefetcher.
+- `extra_prefetcher_cmds` remains an alias for `extra_prefetchers`.
+- Invalid configuration is reported with `vim.notify(..., ERROR)`.
 
 ## Usage
 

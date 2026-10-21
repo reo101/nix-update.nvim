@@ -13,7 +13,8 @@
                {:text true}
                (vim.schedule_wrap done)))))
 
-  {:stdout (split-output result.stdout)
+  {:code result.code
+   :stdout (split-output result.stdout)
    :stderr (split-output result.stderr)})
 
 {: call-command}

@@ -14,8 +14,7 @@
  local _local_5_ = require("nix-update.utils") local find_child = _local_5_["find-child"]
  local find_children = _local_5_["find-children"]
  local coords = _local_5_.coords
- local flatten_fragments = _local_5_["flatten-fragments"]
- local call_command = _local_5_["call-command"] local fetches_query_string = "\n(\n  (apply_expression\n    function:\n      [(variable_expression\n         name: (identifier) @_fname)\n       (select_expression\n         attrpath:\n           (attrpath\n             attr: (identifier) @_fname\n             .))]\n    argument:\n      [(attrset_expression\n         (binding_set) @_fargs)\n       (rec_attrset_expression\n         (binding_set) @_fargs)]\n  ) @_fwhole\n  (#any-of? @_fname %s)\n)\n       "
+ local flatten_fragments = _local_5_["flatten-fragments"] local fetches_query_string = "\n(\n  (apply_expression\n    function:\n      [(variable_expression\n         name: (identifier) @_fname)\n       (select_expression\n         attrpath:\n           (attrpath\n             attr: (identifier) @_fname\n             .))]\n    argument:\n      [(attrset_expression\n         (binding_set) @_fargs)\n       (rec_attrset_expression\n         (binding_set) @_fargs)]\n  ) @_fwhole\n  (#any-of? @_fname %s)\n)\n       "
 
 
 
@@ -1015,53 +1014,27 @@
  vim.notify("Prefetch initiated, awaiting response...")
 
 
- if (type(prefetcher) == "function") then
+ do local ok, result
 
 
+ local function fn_184_()
+ local task = prefetcher(argument_values)
+ assert((type(task) == "table"), "Prefetcher must return a vim.async.Task")
 
- local function fn_184_(done) local done_3f = false
+ local data = vim.async.await(task)
+ assert((type(data) == "table"), "Prefetch task must return a table of fields")
 
- local finish
- local function fn_185_(data, err)
- if not done_3f then done_3f = true
-
- local function hashfn_186_() return done({data = data, err = err}) end return vim.schedule(hashfn_186_) else return nil end end finish = fn_185_
- local ok, data = pcall(prefetcher, argument_values, finish)
- if ok then
- if data then
- return finish(data) else return nil end else
- return finish(nil, data) end end local _local_190_ = vim.async.await(fn_184_) local data = _local_190_.data local err = _local_190_.err
- if (type(data) == "table") then
- cache[fetch0._fwhole] = {bufnr = bufnr0, fetch = fetch0, data = data} else
+ for key, value in pairs(data) do
+ assert(((type(key) == "string") and (type(value) == "string")), "Prefetch task fields must have string keys and values") end
 
 
+ return data end ok, result = vim.async.pawait(vim.async.run(fn_184_))
 
- cache[fetch0._fwhole] = {bufnr = bufnr0, fetch = fetch0, err = string.format("Lua prefetcher failed: %s", vim.inspect((err or data or "no result")))} end else
+ vim.async.await(vim.schedule)
 
-
-
-
-
-
- local prefetcher_cmd = prefetcher(argument_values)
-
- if not prefetcher_cmd then
- vim.notify(string.format("Could not generate command for the prefetcher '%s'", fetch0._fname))
-
-
-
- return nil else end
-
- local _local_193_ = call_command(prefetcher_cmd) local stdout = _local_193_.stdout local stderr = _local_193_.stderr
-
- if (#stdout == 0) then
- cache[fetch0._fwhole] = {bufnr = bufnr0, fetch = fetch0, err = string.format("Oopsie: %s", vim.inspect(stderr))} else
-
-
-
-
-
- cache[fetch0._fwhole] = {bufnr = bufnr0, fetch = fetch0, data = prefetcher.extractor(stdout)} end end
+ local if_tgt_185_ if ok then
+ if_tgt_185_ = {bufnr = bufnr0, fetch = fetch0, data = result} else
+ if_tgt_185_ = {bufnr = bufnr0, fetch = fetch0, err = string.format("Prefetcher '%s' failed: %s", fetch0._fname, vim.inspect(result))} end cache[fetch0._fwhole] = if_tgt_185_ end
 
 
 
@@ -1070,6 +1043,6 @@
 
 
  local function prefetch_fetch(opts)
- local function hashfn_196_() return prefetch_fetch_task(opts) end return vim.async.run(hashfn_196_) end
+ local function hashfn_187_() return prefetch_fetch_task(opts) end return vim.async.run(hashfn_187_) end
 
  return {["fetches-query-string"] = fetches_query_string, ["gen-fetches-names"] = gen_fetches_names, ["gen-fetches-query"] = gen_fetches_query, ["get-root"] = get_root, ["find-all-local-bindings"] = find_all_local_bindings, ["try-get-binding-value"] = try_get_binding_value, ["fragments-to-value"] = fragments_to_value, ["find-used-fetches"] = find_used_fetches, ["get-fetch-at-cursor"] = get_fetch_at_cursor, ["calculate-updates"] = calculate_updates, ["preview-update"] = preview_update, ["apply-update"] = apply_update, ["notify-update"] = notify_update, ["flash-update"] = flash_update, ["prefetch-fetch"] = prefetch_fetch}

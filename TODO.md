@@ -10,6 +10,6 @@
 
 - [ ] More commands
 - [ ] More prefetchers
-- [ ] Simpler prefetch commands (not just system ones, maybe Lua functions)
+- [x] Simpler prefetch commands (command tables and Lua task factories)
 - [ ] Style guidelines (with optional enforcement)
 - [ ] Telescope pickers for selective updating

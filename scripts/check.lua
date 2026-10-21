@@ -59,31 +59,28 @@
 
 
 
- local _local_15_ = require("nix-update.utils") local prefetcher_mt = _local_15_["prefetcher-mt"]
- do local original_notify = vim.notify
- local notifications = {} local called_3f = false
+ local _local_15_ = require("nix-update.utils") local prefetcher_mt = _local_15_["prefetcher-mt"] local called_3f = false
 
- local prefetcher
-
+ do local prefetcher
 
  local function fn_16_(_) called_3f = true return nil end prefetcher = setmetatable({["required-cmds"] = {"nix-update-nonexistent-prefetch-command"}, prefetcher = fn_16_}, prefetcher_mt)
 
- local function hashfn_17_(_241) return table.insert(notifications, _241) end vim.notify = hashfn_17_
- local ok, result = pcall(prefetcher, {})
- vim.notify = original_notify
- assert_truthy(ok, "missing command validation raised an error")
- assert_truthy((result == nil), "missing command validation did not abort")
+ local task = prefetcher({})
+ assert_truthy((type(task) == "table"), "command prefetcher did not return a task") local ok, err = task:pwait(1000)
+
+ assert_truthy(not ok, "missing command task did not fail")
  assert_truthy(not called_3f, "prefetcher ran without its required command")
- assert_truthy((notifications[1] == "Missing commands: nix-update-nonexistent-prefetch-command"), "missing command diagnostic is incorrect") end
+ assert_truthy(string.find(err, "Missing commands: nix-update-nonexistent-prefetch-command", 1, true), "missing command diagnostic is incorrect") end
 
 
 
- do local expected = {cmd = vim.v.progpath, args = {}} local prefetcher
+ do local prefetcher
 
+ local function fn_17_(_) return {cmd = "printf", args = {"command-hash"}} end
+ local function fn_18_(stdout) return {hash = stdout[1]} end prefetcher = setmetatable({["required-cmds"] = {"printf"}, prefetcher = fn_17_, extractor = fn_18_}, prefetcher_mt)
 
- local function fn_18_(_) return expected end prefetcher = setmetatable({["required-cmds"] = {vim.v.progpath}, prefetcher = fn_18_}, prefetcher_mt)
-
- assert_truthy((prefetcher({}) == expected), "available command validation blocked the prefetcher") end
+ local task = prefetcher({})
+ assert_truthy((task:wait(1000).hash == "command-hash"), "command task did not extract its result") end
 
 
  local commands = require("nix-update.commands")
@@ -175,79 +172,148 @@
 
 
 
-
-
-
-
-
- local function fn_22_(_) return {cmd = "printf", args = {"command-hash"}} end
- local function fn_23_(stdout) return {hash = stdout[1]} end nix_update.setup({update_actions = {"apply"}, extra_prefetchers = {commandFetch = {["required-cmds"] = {"printf"}, prefetcher = fn_22_, extractor = fn_23_}}})
- do local bufnr = vim.api.nvim_create_buf(false, true)
- local fetches = require("nix-update.fetches")
- vim.bo[bufnr].filetype = "nix"
- vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, {"commandFetch { hash = \"old\"; }"})
-
-
- local fetch = fetches["find-used-fetches"]({bufnr = bufnr})[1]
- local task = fetches["prefetch-fetch"]({bufnr = bufnr, fetch = fetch}) task:wait(1000)
-
- assert_truthy((vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)[1] == "commandFetch { hash = \"command-hash\"; }"), "command prefetch did not update the buffer") end
-
-
-
-
- local function assert_lua_prefetch(label, runner, expected)
- nix_update.setup({update_actions = {"apply"}, extra_prefetchers = {luaFetch = runner}})
-
+ local function start_prefetch(prefetcher)
+ vim.g.nix_update = nil
+ nix_update.setup({update_actions = {"apply"}, extra_prefetchers = {taskFetch = prefetcher}})
 
 
  local bufnr = vim.api.nvim_create_buf(false, true)
  vim.bo[bufnr].filetype = "nix"
- vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, {"luaFetch { url = \"https://example.com\"; hash = \"old\"; }"})
-
+ vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, {"taskFetch { url = \"https://example.com\"; hash = \"old\"; }"})
 
 
  local fetches = require("nix-update.fetches")
  local fetch = fetches["find-used-fetches"]({bufnr = bufnr})[1]
- assert_truthy(fetch, (label .. ": fetch was not found"))
-
- local task = fetches["prefetch-fetch"]({bufnr = bufnr, fetch = fetch}) task:wait(1000)
-
-
- local cache = require("nix-update._cache")
- local do_tgt_25_ do local t_24_ = cache.cache if (nil ~= t_24_) then t_24_ = t_24_[fetch._fwhole] else end if (nil ~= t_24_) then t_24_ = t_24_.data else end if (nil ~= t_24_) then t_24_ = t_24_.hash else end do_tgt_25_ = t_24_ end assert_truthy((do_tgt_25_ == expected), (label .. ": wrong hash"))
+ assert_truthy(fetch, "task prefetch: fetch was not found")
+ return {bufnr = bufnr, fetch = fetch, task = fetches["prefetch-fetch"]({bufnr = bufnr, fetch = fetch})} end
 
 
- return assert_truthy((vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)[1] == string.format("luaFetch { url = \"https://example.com\"; hash = \"%s\"; }", expected)), (label .. ": buffer was not updated")) end
+ local function assert_task_prefetch(label, prefetcher, expected)
+ local _let_22_ = start_prefetch(prefetcher) local bufnr = _let_22_.bufnr local fetch = _let_22_.fetch local task = _let_22_.task
+ local _let_23_ = require("nix-update._cache") local cache = _let_23_.cache task:wait(1000)
 
+ local do_tgt_25_ do local t_24_ = cache if (nil ~= t_24_) then t_24_ = t_24_[fetch._fwhole] else end if (nil ~= t_24_) then t_24_ = t_24_.data else end if (nil ~= t_24_) then t_24_ = t_24_.hash else end do_tgt_25_ = t_24_ end assert_truthy((do_tgt_25_ == expected), (label .. ": wrong hash"))
 
-
-
-
-
- local function fn_29_(args)
- assert_truthy((args.url == "https://example.com"), "synchronous Lua prefetcher: wrong args")
-
- return {hash = "sync-hash"} end assert_lua_prefetch("synchronous Lua prefetcher", fn_29_, "sync-hash")
+ return assert_truthy((vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)[1] == string.format("taskFetch { url = \"https://example.com\"; hash = \"%s\"; }", expected)), (label .. ": buffer was not updated")) end
 
 
 
 
- local function fn_30_(args, done)
- assert_truthy((args.url == "https://example.com"), "asynchronous Lua prefetcher: wrong args")
-
- local function hashfn_31_() return done({hash = "async-hash"}) end return vim.schedule(hashfn_31_) end assert_lua_prefetch("asynchronous Lua prefetcher", fn_30_, "async-hash")
 
 
 
+ local function fn_29_(_) return {cmd = "printf", args = {"command-hash"}} end
+ local function fn_30_(stdout) return {hash = stdout[1]} end assert_task_prefetch("command table", {["required-cmds"] = {"printf"}, prefetcher = fn_29_, extractor = fn_30_}, "command-hash")
 
- local function fn_32_(_args, done)
+
+
+
+ local function fn_31_(args)
+
+ local function fn_32_()
+ assert_truthy((args.url == "https://example.com"), "task received wrong args")
+ return {hash = "task-hash"} end return vim.async.run(fn_32_) end assert_task_prefetch("immediate task", fn_31_, "task-hash")
+
+
+
+
+ local function fn_33_(_)
+
+ local function fn_34_()
+ vim.async.sleep(1)
+ local _local_35_ = call_command({cmd = "printf", args = {"awaited-hash"}}) local stdout = _local_35_.stdout
+ return {hash = stdout[1]} end return vim.async.run(fn_34_) end assert_task_prefetch("awaiting task", fn_33_, "awaited-hash")
+
+
+
+
+ local function fn_36_(_)
+
+ local function fn_37_()
+
+ local function fn_38_(done)
  local timer = vim.uv.new_timer()
 
- local function fn_33_() timer:close()
+ local function fn_39_() timer:close()
 
- return done({hash = "timer-hash"}) end timer:start(0, 0, fn_33_)
- return nil end assert_lua_prefetch("fast-event Lua prefetcher", fn_32_, "timer-hash") else end
+ return done() end timer:start(0, 0, fn_39_)
+ return nil end vim.async.await(fn_38_)
+ assert_truthy(vim.in_fast_event(), "timer did not resume in a fast event")
+ return {hash = "timer-hash"} end return vim.async.run(fn_37_) end assert_task_prefetch("fast-event task", fn_36_, "timer-hash")
+
+
+ local function assert_prefetch_error(label, prefetcher, expected)
+ local _let_40_ = start_prefetch(prefetcher) local bufnr = _let_40_.bufnr local fetch = _let_40_.fetch local task = _let_40_.task
+ local _let_41_ = require("nix-update._cache") local cache = _let_41_.cache task:wait(1000)
+
+ local err do local t_42_ = cache if (nil ~= t_42_) then t_42_ = t_42_[fetch._fwhole] else end if (nil ~= t_42_) then t_42_ = t_42_.err else end err = t_42_ end
+ assert_truthy((err and string.find(err, expected, 1, true)), (label .. ": wrong error"))
+
+ return assert_truthy((vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)[1] == "taskFetch { url = \"https://example.com\"; hash = \"old\"; }"), (label .. ": modified the buffer on failure")) end
+
+
+
+
+
+
+ local function fn_45_(_) local function hashfn_46_() return error("task failure") end return vim.async.run(hashfn_46_) end assert_prefetch_error("failed task", fn_45_, "task failure")
+
+
+
+ local function fn_47_(_) return error("factory failure") end assert_prefetch_error("factory failure", fn_47_, "factory failure")
+
+
+
+ local function fn_48_(_) return {hash = "not-a-task"} end assert_prefetch_error("synchronous field return", fn_48_, "Invalid arguments, expected Task")
+
+
+
+ local function fn_49_(_, done) return done({hash = "not-a-task"}) end assert_prefetch_error("callback prefetcher", fn_49_, "nil value")
+
+
+
+ local function fn_50_(_) local function hashfn_51_() return nil end return vim.async.run(hashfn_51_) end assert_prefetch_error("invalid task result", fn_50_, "Prefetch task must return a table of fields")
+
+
+
+ local function fn_52_(_) local function hashfn_53_() return {hash = 1} end return vim.async.run(hashfn_53_) end assert_prefetch_error("invalid field value", fn_52_, "Prefetch task fields must have string keys and values")
+
+
+
+
+ local function fn_54_(_) return error("must not run") end
+ local function fn_55_(_) return {} end assert_prefetch_error("missing fetch key", {["required-keys"] = {"owner"}, prefetcher = fn_54_, extractor = fn_55_}, "Missing keys: owner")
+
+
+
+ local function fn_56_(_) return {cmd = "sh", args = {"-c", "printf failure >&2; printf output; exit 7"}} end
+ local function fn_57_(_) return error("must not extract failed output") end assert_prefetch_error("command failure", {prefetcher = fn_56_, extractor = fn_57_}, "exited with code 7: failure")
+
+
+
+ local function fn_58_(_) return {cmd = "printf", args = {"output"}} end
+ local function fn_59_(_) return error("extractor failure") end assert_prefetch_error("extractor failure", {prefetcher = fn_58_, extractor = fn_59_}, "extractor failure")
+
+
+ local prefetch_task = nil local finished_3f = false
+
+
+
+ local function fn_60_(_)
+
+
+ local function fn_61_()
+ vim.async.sleep(10000) finished_3f = true
+
+ return {hash = "cancelled-hash"} end prefetch_task = vim.async.run(fn_61_)
+ return prefetch_task end local _let_62_ = start_prefetch(fn_60_) local fetch = _let_62_.fetch local task = _let_62_.task
+ local _let_63_ = require("nix-update._cache") local cache = _let_63_.cache task:close()
+
+ do local ok, err = task:pwait(1000)
+ assert_truthy((not ok and (err == "closed")), "request did not cancel") end
+ assert_truthy(prefetch_task:completed(), "cancelled child task did not finish")
+ assert_truthy(not finished_3f, "cancelled child task continued")
+ assert_truthy((cache[fetch._fwhole] == nil), "cancelled request wrote to the cache") else end
 
 
  local health = require("nix-update.health")

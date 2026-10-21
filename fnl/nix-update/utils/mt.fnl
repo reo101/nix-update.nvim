@@ -1,6 +1,9 @@
 (local {: missing-keys}
        (require "nix-update.utils.common"))
 
+(local {: call-command}
+       (require "nix-update.utils.command"))
+
 (fn create-proxied []
   (var raw {})
   (var on-index (fn [_new _key _value]))
@@ -52,37 +55,35 @@
   prefetcher-mt
   {:__call
    (fn [self args]
-     ;;; Check for missing keys
-     (when self.required-keys
-       (let [missing (missing-keys args self.required-keys)]
-         (when (> (length missing) 0)
-           (local formatted
-                  (-> missing
-                      ipairs
-                      vim.iter
-                      (: :map (fn [_ m] (format-missing-key m)))
-                      (: :totable)))
-           (vim.notify
-             (string.format
-               "Missing keys: %s"
-               (table.concat formatted "; ")))
-           (lua "return nil"))))
+     (vim.async.run
+       (fn []
+         (when self.required-keys
+           (let [missing (missing-keys args self.required-keys)]
+             (when (> (length missing) 0)
+               (local formatted
+                      (-> missing
+                          vim.iter
+                          (: :map format-missing-key)
+                          (: :totable)))
+               (error (string.format "Missing keys: %s"
+                                     (table.concat formatted "; "))))))
 
-     ;;; Check for missing cmds
-     (when self.required-cmds
-       (let [missing (-> self.required-cmds
-                         vim.iter
-                         (: :filter (fn [cmd] (= (vim.fn.executable cmd) 0)))
-                         (: :totable))]
-         (when (> (length missing) 0)
-           (vim.notify
-             (string.format
-               "Missing commands: %s"
-               (table.concat missing ", ")))
-           (lua "return nil"))))
+         (when self.required-cmds
+           (let [missing (-> self.required-cmds
+                             vim.iter
+                             (: :filter #(= (vim.fn.executable $) 0))
+                             (: :totable))]
+             (when (> (length missing) 0)
+               (error (string.format "Missing commands: %s"
+                                     (table.concat missing ", "))))))
 
-     ;;; Finally, safely call the prefetcher function
-     (self.prefetcher args))})
+         (local {: code : stdout : stderr}
+                (call-command (self.prefetcher args)))
+         (when (not= code 0)
+           (error (string.format "Prefetch command exited with code %d: %s"
+                                 code
+                                 (table.concat stderr "\n"))))
+         (self.extractor stdout))))})
 
 {: create-proxied
  : prefetcher-mt}
